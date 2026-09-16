@@ -3,6 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { Crown, Search, ArrowUpRight } from 'lucide-react';
+import { useCurrency } from '@/components/currency-context';
 
 interface NavbarProps {
   onOpenRegister: () => void;
@@ -12,6 +13,8 @@ interface NavbarProps {
 }
 
 export function Navbar({ onOpenRegister, onOpenTopup, onOpenRules, onOpenSearch }: NavbarProps) {
+  const { currency, setCurrency } = useCurrency();
+
   return (
     <header className="sticky top-0 z-40 w-full bg-white/80 backdrop-blur-xl border-b border-black/[0.06] transition-all">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-3 text-xs">
@@ -55,6 +58,34 @@ export function Navbar({ onOpenRegister, onOpenTopup, onOpenRules, onOpenSearch 
 
         {/* Right Icon Actions */}
         <div className="flex items-center gap-2">
+          {/* Currency Switcher Toggle Pill */}
+          <div className="inline-flex items-center p-0.5 rounded-full bg-stone-100/90 border border-stone-200/80 text-[11px] font-bold shadow-xs">
+            <button
+              type="button"
+              onClick={() => setCurrency('USD')}
+              className={`px-2.5 py-1 rounded-full transition-all cursor-pointer ${
+                currency === 'USD'
+                  ? 'bg-coral-500 text-white shadow-coral-pill font-extrabold'
+                  : 'text-stone-600 hover:text-stone-900 font-semibold'
+              }`}
+              title="Switch currency to US Dollars ($)"
+            >
+              $ USD
+            </button>
+            <button
+              type="button"
+              onClick={() => setCurrency('PKR')}
+              className={`px-2.5 py-1 rounded-full transition-all cursor-pointer ${
+                currency === 'PKR'
+                  ? 'bg-coral-500 text-white shadow-coral-pill font-extrabold'
+                  : 'text-stone-600 hover:text-stone-900 font-semibold'
+              }`}
+              title="Switch currency to Pakistani Rupees (PKR)"
+            >
+              PKR
+            </button>
+          </div>
+
           <button
             onClick={onOpenSearch || onOpenRegister}
             className="p-2 rounded-full bg-stone-100/80 hover:bg-stone-200/80 text-stone-700 transition-colors border border-stone-200/50"

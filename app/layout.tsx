@@ -15,6 +15,7 @@ const inter = Inter({
 });
 
 import { ToastProvider } from '@/components/toast-notification';
+import { CurrencyProvider } from '@/components/currency-context';
 
 export const metadata: Metadata = {
   title: 'outbid.lol — Claim a rank on the public leaderboard',
@@ -49,9 +50,11 @@ export default function RootLayout({
         />
       </head>
       <body className="font-sans bg-[#FAF9F6] text-stone-900 min-h-screen flex flex-col antialiased selection:bg-coral-100 selection:text-coral-900">
-        <ToastProvider>
-          {children}
-        </ToastProvider>
+        <CurrencyProvider>
+          <ToastProvider>
+            {children}
+          </ToastProvider>
+        </CurrencyProvider>
       </body>
     </html>
   );

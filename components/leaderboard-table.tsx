@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { ExternalLink, ChevronLeft, ChevronRight, Tag, MousePointerClick, TrendingUp, Sparkles, Star } from 'lucide-react';
 import { formatCurrency } from '@/lib/city-utils';
+import { useCurrency } from '@/components/currency-context';
 
 export interface LeaderboardItem {
   id: string;
@@ -77,6 +78,8 @@ export function LeaderboardTable({
     link.click();
     document.body.removeChild(link);
   };
+
+  const { formatAmount } = useCurrency();
 
   // Skeleton Loading Rows
   if (isLoading) {
@@ -245,7 +248,7 @@ export function LeaderboardTable({
 
             {/* Terracotta Dollar Figure on right */}
             <span className="font-heading font-black text-base sm:text-lg text-coral-500 font-money tracking-tight flex-shrink-0 ml-auto">
-              {formatCurrency(item.totalPaidCents)}
+              {formatAmount(item.totalPaidCents)}
             </span>
           </div>
         );

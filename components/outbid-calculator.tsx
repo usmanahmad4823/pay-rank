@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { Calculator, Trophy, Sparkles, TrendingUp, DollarSign, ArrowRight, ShieldCheck } from 'lucide-react';
 import { formatCurrency } from '@/lib/city-utils';
+import { useCurrency } from '@/components/currency-context';
 
 interface OutbidCalculatorProps {
   currentTopBidCents: number;
@@ -10,6 +11,7 @@ interface OutbidCalculatorProps {
 }
 
 export function OutbidCalculator({ currentTopBidCents, onClaimRank }: OutbidCalculatorProps) {
+  const { formatAmount, currencySymbol } = useCurrency();
   const [targetRank, setTargetRank] = useState<1 | 2 | 3>(1);
   const [customBidDollars, setCustomBidDollars] = useState<string>(
     ((currentTopBidCents + 1000) / 100).toString()
@@ -72,11 +74,11 @@ export function OutbidCalculator({ currentTopBidCents, onClaimRank }: OutbidCalc
         {/* Input */}
         <div className="space-y-1">
           <label className="block text-[9px] font-bold uppercase tracking-wider text-stone-500">
-            Bid Amount (USD)
+            Bid Amount ({currencySymbol.trim()})
           </label>
           <div className="relative">
             <span className="absolute inset-y-0 left-0 pl-2.5 flex items-center text-coral-500 font-extrabold text-xs">
-              $
+              {currencySymbol}
             </span>
             <input
               type="number"
@@ -84,11 +86,11 @@ export function OutbidCalculator({ currentTopBidCents, onClaimRank }: OutbidCalc
               step="5"
               value={customBidDollars}
               onChange={(e) => setCustomBidDollars(e.target.value)}
-              className="w-full pl-6 pr-2 py-1.5 rounded-lg bg-white border border-stone-200/80 text-coral-500 font-money font-black text-sm focus:outline-none focus:border-coral-500"
+              className="w-full pl-7 pr-2 py-1.5 rounded-lg bg-white border border-stone-200/80 text-coral-500 font-money font-black text-sm focus:outline-none focus:border-coral-500"
             />
           </div>
           <p className="text-[9px] text-stone-400">
-            Current #1 Bid: <strong className="text-stone-700 font-money">{formatCurrency(currentTopBidCents)}</strong>
+            Current #1 Bid: <strong className="text-stone-700 font-money">{formatAmount(currentTopBidCents)}</strong>
           </p>
         </div>
 
@@ -120,7 +122,7 @@ export function OutbidCalculator({ currentTopBidCents, onClaimRank }: OutbidCalc
         className="w-full py-2.5 rounded-full bg-coral-500 hover:bg-coral-600 text-white font-bold text-xs shadow-coral-pill transition-all flex items-center justify-center gap-1.5"
       >
         <Sparkles className="w-3.5 h-3.5" />
-        <span>Claim Target Rank for ${customBidDollars || '20'}</span>
+        <span>Claim Target Rank for {formatAmount(calculatedCents)}</span>
         <ArrowRight className="w-3.5 h-3.5" />
       </button>
     </div>

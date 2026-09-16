@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Minus, Plus, Globe, ChevronDown, Calculator } from 'lucide-react';
 import { formatCurrency } from '@/lib/city-utils';
 import { CategoryDropdown } from '@/components/category-dropdown';
+import { useCurrency } from '@/components/currency-context';
 
 interface ClaimWidgetProps {
   currentTopBidCents: number;
@@ -12,6 +13,8 @@ interface ClaimWidgetProps {
 }
 
 export function ClaimWidget({ currentTopBidCents, onClaimRank, onOpenCalculator }: ClaimWidgetProps) {
+  const { formatAmount } = useCurrency();
+
   // Target bid defaults to top bid + $1 (or $20 if board is empty)
   const defaultTargetCents = currentTopBidCents > 0 ? currentTopBidCents + 100 : 2000;
   const [targetCents, setTargetCents] = useState<number>(defaultTargetCents);
@@ -43,7 +46,7 @@ export function ClaimWidget({ currentTopBidCents, onClaimRank, onOpenCalculator 
               <Minus className="w-3.5 h-3.5" />
             </button>
             <span className="text-coral-500 font-black font-money text-3xl sm:text-6xl">
-              {formatCurrency(targetCents)}
+              {formatAmount(targetCents)}
             </span>
             <button
               type="button"

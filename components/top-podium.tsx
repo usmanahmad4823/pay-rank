@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { Crown, Sparkles, MapPin, Tag, TrendingUp, Trophy } from 'lucide-react';
 import { formatCurrency } from '@/lib/city-utils';
+import { useCurrency } from '@/components/currency-context';
 
 interface PodiumItem {
   id: string;
@@ -24,6 +25,8 @@ interface TopPodiumProps {
 }
 
 export function TopPodium({ topItems, cityName, onTopUpRestaurant }: TopPodiumProps) {
+  const { formatAmount } = useCurrency();
+
   if (!topItems || topItems.length === 0) return null;
 
   const rank1 = topItems.find((item) => item.rank === 1) || topItems[0];
@@ -81,7 +84,7 @@ export function TopPodium({ topItems, cityName, onTopUpRestaurant }: TopPodiumPr
               </div>
 
               <div className="px-3 py-1 rounded-full bg-white text-stone-900 font-money font-black text-xs border border-stone-200 mt-1">
-                {formatCurrency(rank2.totalPaidCents)}
+                {formatAmount(rank2.totalPaidCents)}
               </div>
 
               {onTopUpRestaurant && (
@@ -129,7 +132,7 @@ export function TopPodium({ topItems, cityName, onTopUpRestaurant }: TopPodiumPr
               </div>
 
               <div className="px-3.5 py-1 rounded-full bg-coral-500 text-white font-money font-black text-sm shadow-coral-pill mt-1">
-                {formatCurrency(rank1.totalPaidCents)}
+                {formatAmount(rank1.totalPaidCents)}
               </div>
 
               {onTopUpRestaurant && (
@@ -176,7 +179,7 @@ export function TopPodium({ topItems, cityName, onTopUpRestaurant }: TopPodiumPr
               </div>
 
               <div className="px-3 py-1 rounded-full bg-white text-stone-900 font-money font-black text-xs border border-stone-200 mt-1">
-                {formatCurrency(rank3.totalPaidCents)}
+                {formatAmount(rank3.totalPaidCents)}
               </div>
 
               {onTopUpRestaurant && (

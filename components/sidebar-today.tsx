@@ -4,6 +4,7 @@ import React from 'react';
 import { ChevronRight } from 'lucide-react';
 import { formatCurrency } from '@/lib/city-utils';
 import { LeaderboardItem } from '@/components/leaderboard-table';
+import { useCurrency } from '@/components/currency-context';
 
 interface SidebarTodayProps {
   items: LeaderboardItem[];
@@ -13,6 +14,7 @@ interface SidebarTodayProps {
 }
 
 export function SidebarToday({ items, title = "Today's ranking", onSelectRestaurant, onSeeAll }: SidebarTodayProps) {
+  const { formatAmount } = useCurrency();
   const displayItems = items.slice(0, 10);
 
   return (
@@ -61,7 +63,7 @@ export function SidebarToday({ items, title = "Today's ranking", onSelectRestaur
             </div>
 
             <span className="font-bold text-coral-500 font-money text-[11px] flex-shrink-0 ml-1">
-              {formatCurrency(item.totalPaidCents)}
+              {formatAmount(item.totalPaidCents)}
             </span>
           </div>
         ))}
