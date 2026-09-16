@@ -1,13 +1,13 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import confetti from 'canvas-confetti';
 import { Crown, CheckCircle2, Copy, Check, MapPin, Globe, Sparkles, TrendingUp, Key, ArrowRight } from 'lucide-react';
 import { formatCurrency } from '@/lib/city-utils';
 
-export default function CheckoutSuccessPage() {
+function CheckoutSuccessContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -161,5 +161,22 @@ export default function CheckoutSuccessPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function CheckoutSuccessPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#FAF9F6] flex items-center justify-center p-4 text-stone-900 font-sans">
+          <div className="text-center space-y-3">
+            <div className="w-12 h-12 border-4 border-coral-500 border-t-transparent rounded-full animate-spin mx-auto" />
+            <p className="text-stone-500 font-bold text-xs">Loading checkout status...</p>
+          </div>
+        </div>
+      }
+    >
+      <CheckoutSuccessContent />
+    </Suspense>
   );
 }
