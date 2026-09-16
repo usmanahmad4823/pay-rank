@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Minus, Plus, Globe, ChevronDown, Calculator } from 'lucide-react';
 import { formatCurrency } from '@/lib/city-utils';
 import { CategoryDropdown } from '@/components/category-dropdown';
@@ -20,6 +20,15 @@ export function ClaimWidget({ currentTopBidCents, onClaimRank, onOpenCalculator 
   const [targetCents, setTargetCents] = useState<number>(defaultTargetCents);
   const [inputName, setInputName] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Pakistani');
+
+  // Keep targetCents synced with current #1 position bid when timeframe/category data loads
+  useEffect(() => {
+    if (currentTopBidCents > 0) {
+      setTargetCents(currentTopBidCents + 100);
+    } else {
+      setTargetCents(2000);
+    }
+  }, [currentTopBidCents]);
 
   const increment = () => setTargetCents((prev) => prev + 100); // +$1
   const decrement = () => setTargetCents((prev) => Math.max(100, prev - 100)); // -$1
