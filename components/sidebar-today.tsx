@@ -7,11 +7,13 @@ import { LeaderboardItem } from '@/components/leaderboard-table';
 
 interface SidebarTodayProps {
   items: LeaderboardItem[];
+  title?: string;
   onSelectRestaurant?: (item: LeaderboardItem) => void;
+  onSeeAll?: () => void;
 }
 
-export function SidebarToday({ items, onSelectRestaurant }: SidebarTodayProps) {
-  const todayItems = items.slice(0, 10);
+export function SidebarToday({ items, title = "Today's ranking", onSelectRestaurant, onSeeAll }: SidebarTodayProps) {
+  const displayItems = items.slice(0, 10);
 
   return (
     <aside className="w-full bg-white rounded-[20px] sm:rounded-[24px] p-3 sm:p-3.5 shadow-sm border border-stone-100/90 space-y-2">
@@ -19,17 +21,22 @@ export function SidebarToday({ items, onSelectRestaurant }: SidebarTodayProps) {
       <div className="flex items-center justify-between px-0.5 pb-0.5">
         <div className="flex items-center gap-1.5">
           <span className="w-1.5 h-1.5 rounded-full bg-coral-500 flex-shrink-0" />
-          <h3 className="font-bold text-stone-900 text-xs tracking-tight">Today's ranking</h3>
+          <h3 className="font-bold text-stone-900 text-xs tracking-tight">{title}</h3>
         </div>
-        <button className="text-[11px] font-medium text-coral-500 hover:text-coral-600 flex items-center gap-0.5 transition-colors">
-          <span>See all</span>
-          <ChevronRight className="w-3 h-3" />
-        </button>
+        {onSeeAll && (
+          <button
+            onClick={onSeeAll}
+            className="text-[11px] font-medium text-coral-500 hover:text-coral-600 flex items-center gap-0.5 transition-colors cursor-pointer"
+          >
+            <span>See all</span>
+            <ChevronRight className="w-3 h-3" />
+          </button>
+        )}
       </div>
 
       {/* List items (Top 10) */}
       <div className="space-y-0.5">
-        {todayItems.map((item, idx) => (
+        {displayItems.map((item, idx) => (
           <div
             key={item.id}
             onClick={() => onSelectRestaurant && onSelectRestaurant(item)}

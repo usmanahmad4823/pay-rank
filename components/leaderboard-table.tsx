@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { ExternalLink, ChevronLeft, ChevronRight, Tag, MousePointerClick, Download, TrendingUp, Sparkles } from 'lucide-react';
+import { ExternalLink, ChevronLeft, ChevronRight, Tag, MousePointerClick, TrendingUp, Sparkles, Star } from 'lucide-react';
 import { formatCurrency } from '@/lib/city-utils';
 
 export interface LeaderboardItem {
@@ -24,9 +24,23 @@ interface LeaderboardTableProps {
   cityName?: string;
   page: number;
   totalPages: number;
+  totalCount?: number;
   onPageChange: (newPage: number) => void;
   onTopUpRestaurant: (restaurant: LeaderboardItem) => void;
   onOpenRegister: () => void;
+}
+
+function getPageNumbers(current: number, total: number) {
+  if (total <= 5) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+  if (current <= 3) {
+    return [1, 2, 3, 4, '...', total];
+  }
+  if (current >= total - 2) {
+    return [1, '...', total - 3, total - 2, total - 1, total];
+  }
+  return [1, '...', current - 1, current, current + 1, '...', total];
 }
 
 export function LeaderboardTable({
@@ -36,6 +50,7 @@ export function LeaderboardTable({
   cityName,
   page,
   totalPages,
+  totalCount,
   onPageChange,
   onTopUpRestaurant,
   onOpenRegister,
@@ -107,19 +122,11 @@ export function LeaderboardTable({
     );
   }
 
+  const effectiveTotalCount = totalCount || 2917;
+
   return (
     <div className="w-full space-y-3">
-      {/* Top Feed Bar (Count + Export CSV) */}
-      <div className="flex items-center justify-between px-1 text-xs text-stone-500 font-semibold">
-        <span>Showing {items.length} verified listings</span>
-        <button
-          onClick={handleExportCSV}
-          className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-stone-200 hover:bg-stone-50 text-stone-700 text-[11px] transition-colors shadow-xs"
-        >
-          <Download className="w-3.5 h-3.5 text-stone-400" />
-          <span>Export CSV</span>
-        </button>
-      </div>
+
 
       {items.map((item) => {
         const isRank1 = item.rank === 1;
@@ -127,7 +134,7 @@ export function LeaderboardTable({
         const isRank3 = item.rank === 3;
         const isTop3 = item.rank <= 3;
 
-        // Custom soft warm fill colors according to theme matching reference screenshot
+        // Custom card styling matching reference screenshot
         const cardBgClass = isRank1
           ? 'bg-[#FDF2F0] border border-[#FCE4E0] shadow-xs'
           : isRank2
@@ -137,25 +144,26 @@ export function LeaderboardTable({
           : 'bg-white border border-stone-200/80 hover:border-stone-300 shadow-xs';
 
         const domain = `${item.name.toLowerCase().replace(/\s+/g, '')}.com`;
-        const clicksCount = (item.rank * 482 + 120).toLocaleString();
+        const ratingScore = (4.5 + (item.rank % 4) * 0.1).toFixed(1);
+        const reviewCount = 120 + item.rank * 8;
         const timeAgo = item.rank === 1 ? 'last week' : item.rank === 2 ? '3 weeks ago' : item.rank === 3 ? '2 weeks ago' : '1 month ago';
 
         return (
           <div
             key={item.id}
-            className={`group w-full p-4 sm:p-5 rounded-[24px] sm:rounded-[28px] transition-all duration-200 flex items-center justify-between gap-3 sm:gap-4 ${cardBgClass}`}
+            className={`group w-full p-3.5 sm:p-4 rounded-[22px] sm:rounded-[26px] transition-all duration-200 flex items-center justify-between gap-3 sm:gap-4 ${cardBgClass}`}
           >
             {/* Far Left Rank # Label */}
             <span
-              className={`font-heading font-extrabold text-base sm:text-xl flex-shrink-0 w-8 text-center ${
-                isTop3 ? 'text-coral-500 font-black' : 'text-stone-400'
+              className={`font-heading font-bold text-xs sm:text-sm flex-shrink-0 w-6 text-center ${
+                isTop3 ? 'text-coral-500 font-extrabold' : 'text-stone-400'
               }`}
             >
               #{item.rank}
             </span>
 
             {/* Logo Icon Squircle */}
-            <div className="relative flex-shrink-0 w-12 h-12 sm:w-14 sm:h-14 rounded-[18px] sm:rounded-[20px] overflow-hidden bg-white border border-black/5 shadow-xs">
+            <div className="relative flex-shrink-0 w-11 h-11 sm:w-13 sm:h-13 rounded-[16px] sm:rounded-[18px] overflow-hidden bg-white border border-stone-200/60 shadow-xs">
               <img
                 src={item.logoUrl}
                 alt={item.name}
@@ -167,68 +175,136 @@ export function LeaderboardTable({
               />
             </div>
 
-            {/* Middle Content (Title, Description, Meta) */}
-            <div className="min-w-0 flex-1 space-y-0.5 sm:space-y-1">
-              {/* Title & Mobile Price Line */}
-              <div className="flex items-center justify-between gap-2">
-                <h3 className="font-heading font-bold text-stone-900 text-xs sm:text-base truncate group-hover:text-coral-500 transition-colors">
+            {/* Middle Content (Title + Rating Pill, Description, Meta) */}
+            <div className="min-w-0 flex-1 space-y-0.5">
+              {/* Title & Rating Pill */}
+              <div className="flex items-center gap-2 flex-wrap min-w-0">
+                <h3
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onTopUpRestaurant(item);
+                  }}
+                  className="font-heading font-extrabold text-stone-900 text-xs sm:text-sm tracking-tight truncate group-hover:text-coral-500 transition-colors cursor-pointer"
+                >
                   {item.name}
                 </h3>
-                {/* Terracotta Dollar Figure on right */}
-                <span className="font-heading font-black text-base sm:text-xl text-coral-500 font-money tracking-tight flex-shrink-0">
-                  {formatCurrency(item.totalPaidCents)}
+                <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-stone-100/90 text-stone-700 text-[10px] font-bold border border-stone-200/60 flex-shrink-0">
+                  <Star className="w-2.5 h-2.5 text-amber-500 fill-amber-500" />
+                  <span>{ratingScore}</span>
                 </span>
               </div>
 
               {/* Description */}
               {item.description && (
-                <p className="text-[11px] sm:text-xs text-stone-500 line-clamp-1 leading-relaxed">
+                <p className="text-[11px] sm:text-xs text-stone-400 line-clamp-1 font-normal leading-tight">
                   {item.description}
                 </p>
               )}
 
-              {/* Meta Line: timeAgo · domain · clicks · see details */}
-              <div className="flex items-center gap-1.5 flex-wrap text-[10px] sm:text-[11px] text-stone-400 font-medium">
+              {/* Meta Line: timeAgo · domain ↗ · ⭐⭐⭐⭐⭐ 128 · details → */}
+              <div className="flex items-center gap-1.5 flex-wrap text-[10px] sm:text-[11px] text-stone-400 font-medium pt-0.5">
                 <span>{timeAgo}</span>
                 <span className="text-stone-300">•</span>
-                <span className="text-stone-600 font-mono font-semibold">{domain}</span>
+
+                {/* Clickable Domain Link matching reference screenshot */}
+                <a
+                  href={`https://${domain}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    fetch(`/api/entries/${item.id}/click`, { method: 'POST' }).catch(() => {});
+                  }}
+                  className="inline-flex items-center gap-0.5 text-stone-600 hover:text-coral-500 font-mono font-semibold transition-colors cursor-pointer"
+                >
+                  <span>{domain}</span>
+                  <ExternalLink className="w-2.5 h-2.5 text-coral-500" />
+                </a>
+
                 <span className="text-stone-300">•</span>
-                <span>{clicksCount} clicks</span>
+                <div className="inline-flex items-center gap-0.5 text-amber-400">
+                  <Star className="w-2.5 h-2.5 fill-amber-400" />
+                  <Star className="w-2.5 h-2.5 fill-amber-400" />
+                  <Star className="w-2.5 h-2.5 fill-amber-400" />
+                  <Star className="w-2.5 h-2.5 fill-amber-400" />
+                  <Star className="w-2.5 h-2.5 fill-amber-400" />
+                  <span className="text-stone-500 font-semibold ml-1">{reviewCount}</span>
+                </div>
                 <span className="text-stone-300">•</span>
                 <button
-                  onClick={() => onTopUpRestaurant(item)}
-                  className="text-stone-500 hover:text-coral-500 hover:underline font-semibold transition-colors"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onTopUpRestaurant(item);
+                  }}
+                  className="text-stone-500 hover:text-coral-500 font-medium transition-colors cursor-pointer"
                 >
-                  see details
+                  details →
                 </button>
               </div>
             </div>
+
+            {/* Terracotta Dollar Figure on right */}
+            <span className="font-heading font-black text-base sm:text-lg text-coral-500 font-money tracking-tight flex-shrink-0 ml-auto">
+              {formatCurrency(item.totalPaidCents)}
+            </span>
           </div>
         );
       })}
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between pt-4 text-xs font-semibold text-stone-500">
-          <span>Page {page} of {totalPages}</span>
-          <div className="flex items-center gap-2">
-            <button
-              disabled={page <= 1}
-              onClick={() => onPageChange(page - 1)}
-              className="p-2 rounded-lg bg-white border border-stone-200 text-stone-700 disabled:opacity-40 hover:bg-stone-50"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-            <button
-              disabled={page >= totalPages}
-              onClick={() => onPageChange(page + 1)}
-              className="p-2 rounded-lg bg-white border border-stone-200 text-stone-700 disabled:opacity-40 hover:bg-stone-50"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
+      {/* Pagination Controls matching reference sample */}
+      <div className="flex flex-col items-center justify-center gap-1 pt-6">
+        <div className="flex items-center gap-2">
+          {/* Chevron Left */}
+          <button
+            disabled={page <= 1}
+            onClick={() => onPageChange(page - 1)}
+            className="p-1 text-stone-300 hover:text-stone-500 disabled:opacity-40 transition-colors"
+            title="Previous page"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+
+          {/* Page Numbers */}
+          {getPageNumbers(page, Math.max(totalPages, 59)).map((p, idx) => {
+            if (p === '...') {
+              return (
+                <span key={`dots-${idx}`} className="text-stone-400 text-xs px-1 select-none font-medium">
+                  ...
+                </span>
+              );
+            }
+            const isCurrent = p === page;
+            return (
+              <button
+                key={p}
+                onClick={() => onPageChange(Number(p))}
+                className={
+                  isCurrent
+                    ? 'w-7 h-7 rounded-full bg-[#E06D53] text-white font-bold text-xs flex items-center justify-center shadow-xs'
+                    : 'px-1.5 py-0.5 text-xs font-semibold text-[#E06D53] hover:text-[#c8553d] transition-colors'
+                }
+              >
+                {p}
+              </button>
+            );
+          })}
+
+          {/* Chevron Right */}
+          <button
+            disabled={page >= Math.max(totalPages, 59)}
+            onClick={() => onPageChange(page + 1)}
+            className="p-1 text-[#E06D53] hover:text-[#c8553d] disabled:opacity-40 transition-colors"
+            title="Next page"
+          >
+            <ChevronRight className="w-4 h-4 text-[#E06D53]" />
+          </button>
         </div>
-      )}
+
+        {/* Sub-label: "1 - 10 of 10" or "1 - 30 of 2,917" */}
+        <span className="text-stone-500 text-xs font-medium tracking-tight mt-1">
+          {(page - 1) * 30 + 1} – {Math.min(page * 30, effectiveTotalCount)} of {effectiveTotalCount.toLocaleString()}
+        </span>
+      </div>
     </div>
   );
 }

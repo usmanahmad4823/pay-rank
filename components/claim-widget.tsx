@@ -1,15 +1,17 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Minus, Plus, Globe, ChevronDown } from 'lucide-react';
+import { Minus, Plus, Globe, ChevronDown, Calculator } from 'lucide-react';
 import { formatCurrency } from '@/lib/city-utils';
+import { CategoryDropdown } from '@/components/category-dropdown';
 
 interface ClaimWidgetProps {
   currentTopBidCents: number;
   onClaimRank: (restaurantName: string, category: string, bidAmountCents: number) => void;
+  onOpenCalculator?: () => void;
 }
 
-export function ClaimWidget({ currentTopBidCents, onClaimRank }: ClaimWidgetProps) {
+export function ClaimWidget({ currentTopBidCents, onClaimRank, onOpenCalculator }: ClaimWidgetProps) {
   // Target bid defaults to top bid + $1 (or $20 if board is empty)
   const defaultTargetCents = currentTopBidCents > 0 ? currentTopBidCents + 100 : 2000;
   const [targetCents, setTargetCents] = useState<number>(defaultTargetCents);
@@ -25,7 +27,7 @@ export function ClaimWidget({ currentTopBidCents, onClaimRank }: ClaimWidgetProp
   };
 
   return (
-    <section className="w-full max-w-3xl mx-auto px-4 my-5 sm:my-8 text-center space-y-4 sm:space-y-5">
+    <section className="w-full max-w-4xl mx-auto px-4 my-5 sm:my-8 text-center space-y-4 sm:space-y-5">
       {/* Dynamic Headline: Claim #1 for - $Amount + */}
       <div className="flex items-center justify-center gap-2 sm:gap-4 flex-wrap">
         <h1 className="font-heading text-2xl xs:text-3xl sm:text-5xl font-extrabold text-stone-900 tracking-tight flex items-center gap-2 sm:gap-3 flex-wrap justify-center">
@@ -56,7 +58,24 @@ export function ClaimWidget({ currentTopBidCents, onClaimRank }: ClaimWidgetProp
       </div>
 
       {/* Input Form */}
-      <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row items-center justify-center gap-2.5 max-w-2xl mx-auto">
+      <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row items-center justify-center gap-2.5 max-w-3xl mx-auto">
+        {/* ROI Calculator Button marked in screen */}
+        {onOpenCalculator && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onOpenCalculator();
+            }}
+            className="w-full sm:w-auto px-4 py-3 rounded-full bg-white border border-stone-200/80 hover:bg-stone-50 text-stone-700 font-extrabold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-apple-card hover:shadow-apple-hover transition-all cursor-pointer whitespace-nowrap active:scale-95"
+            title="Open Outbid ROI Calculator"
+          >
+            <Calculator className="w-4 h-4 text-coral-500" />
+            <span>ROI Calculator</span>
+          </button>
+        )}
+
         {/* Name / Handle Input */}
         <div className="relative w-full sm:flex-1">
           <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-stone-400">
@@ -73,24 +92,11 @@ export function ClaimWidget({ currentTopBidCents, onClaimRank }: ClaimWidgetProp
         </div>
 
         {/* Category Dropdown Selector */}
-        <div className="relative w-full sm:w-48">
-          <select
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-            className="w-full pl-4 pr-8 py-3 rounded-full bg-white border border-stone-200/80 text-stone-700 text-xs sm:text-sm appearance-none focus:outline-none focus:border-coral-500 shadow-apple-card hover:shadow-apple-hover cursor-pointer transition-all font-medium"
-          >
-            <option value="Pakistani">Pakistani</option>
-            <option value="Fine Dining">Fine Dining</option>
-            <option value="Japanese">Japanese</option>
-            <option value="Italian">Italian</option>
-            <option value="BBQ">BBQ</option>
-            <option value="Cafes">Cafes</option>
-            <option value="Bakery">Bakery</option>
-          </select>
-          <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-stone-400">
-            <ChevronDown className="w-4 h-4 stroke-[1.5]" />
-          </div>
-        </div>
+        <CategoryDropdown
+          value={selectedCategory}
+          onChange={(cat) => setSelectedCategory(cat)}
+          className="w-full sm:w-44"
+        />
 
         {/* Primary Claim Rank Button */}
         <button

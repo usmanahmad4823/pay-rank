@@ -12,10 +12,11 @@ import { RulesModal } from '@/components/rules-modal';
 import { DuplicateModal } from '@/components/duplicate-modal';
 import { EntryDetailsModal } from '@/components/entry-details-modal';
 import { SearchModal } from '@/components/search-modal';
+import { CalculatorModal } from '@/components/calculator-modal';
 import { LiveActivityTicker } from '@/components/live-activity-ticker';
-import { OutbidCalculator } from '@/components/outbid-calculator';
+import { PublicProjectStats } from '@/components/public-project-stats';
 import { Footer } from '@/components/footer';
-import { Trophy, Flame, Sparkles } from 'lucide-react';
+import { Trophy } from 'lucide-react';
 
 export default function NationalLeaderboardPage() {
   const [items, setItems] = useState<LeaderboardItem[]>([]);
@@ -38,26 +39,50 @@ export default function NationalLeaderboardPage() {
   const [isDuplicateOpen, setIsDuplicateOpen] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isCalculatorOpen, setIsCalculatorOpen] = useState(false);
   const [detailsRestaurant, setDetailsRestaurant] = useState<LeaderboardItem | null>(null);
   const [selectedRestaurant, setSelectedRestaurant] = useState<LeaderboardItem | null>(null);
   const [duplicateData, setDuplicateData] = useState<any>(null);
 
+  const [sidebarItems, setSidebarItems] = useState<LeaderboardItem[]>([]);
+
   const fetchLeaderboard = useCallback(async () => {
     setIsLoading(true);
     try {
-      const url = new URL('/api/leaderboard', window.location.origin);
-      url.searchParams.set('scope', 'national');
-      url.searchParams.set('page', page.toString());
-      url.searchParams.set('timeframe', timeframeTab);
-      if (selectedCategory !== 'All') url.searchParams.set('cuisine', selectedCategory);
+      const params = new URLSearchParams({
+        scope: 'national',
+        page: page.toString(),
+        timeframe: timeframeTab,
+      });
+      if (selectedCategory && selectedCategory !== 'All') {
+        params.set('cuisine', selectedCategory);
+      }
 
-      const res = await fetch(url.toString());
+      // 1. Fetch main feed items for selected timeframe
+      const res = await fetch(`/api/leaderboard?${params.toString()}`);
       const data = await res.json();
 
       if (data.items) {
         setItems(data.items);
-        setTotalPages(data.totalPages);
-        setTotalCount(data.totalCount);
+        setTotalPages(data.totalPages || 1);
+        setTotalCount(data.totalCount || 0);
+      }
+
+      // 2. Fetch sidebar items for complementary timeframe
+      const complementaryTimeframe = timeframeTab === 'all-time' ? 'today' : 'all-time';
+      const sidebarParams = new URLSearchParams({
+        scope: 'national',
+        page: '1',
+        timeframe: complementaryTimeframe,
+      });
+      if (selectedCategory && selectedCategory !== 'All') {
+        sidebarParams.set('cuisine', selectedCategory);
+      }
+
+      const sidebarRes = await fetch(`/api/leaderboard?${sidebarParams.toString()}`);
+      const sidebarData = await sidebarRes.json();
+      if (sidebarData.items) {
+        setSidebarItems(sidebarData.items);
       }
     } catch (err) {
       console.error('Failed to load leaderboard:', err);
@@ -67,15 +92,9 @@ export default function NationalLeaderboardPage() {
   }, [page, selectedCategory, timeframeTab]);
 
   useEffect(() => {
-    async function seedIfNeeded() {
-      try {
-        await fetch('/api/seed');
-      } catch (e) {
-        // Ignore error
-      }
-      fetchLeaderboard();
-    }
-    seedIfNeeded();
+    // Non-blocking trigger to seed mock data if database is fresh
+    fetch('/api/seed').catch(() => {});
+    fetchLeaderboard();
   }, [fetchLeaderboard]);
 
   const handleOpenTopup = (restaurant?: LeaderboardItem) => {
@@ -146,7 +165,7 @@ export default function NationalLeaderboardPage() {
           </div>
         </div>
 
-        {/* 4. Claim #1 Hero Widget */}
+        {/* 4. Claim #1 Hero Widget with ROI Calculator Button */}
         <ClaimWidget
           currentTopBidCents={topBidCents}
           onClaimRank={(name, category, targetBidCents) => {
@@ -155,27 +174,20 @@ export default function NationalLeaderboardPage() {
             setClaimBidDollars((targetBidCents / 100).toString());
             setIsRegisterOpen(true);
           }}
+          onOpenCalculator={() => setIsCalculatorOpen(true)}
         />
 
         {/* 5. Main 2-Column Content Layout (Feed + Sidebar) */}
         <div className="w-full max-w-6xl mx-auto px-4 sm:px-6 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start py-4">
           {/* Left Column: Main Leaderboard Feed Cards */}
           <div className="lg:col-span-8 w-full space-y-4">
-            {/* Interactive Outbid ROI Calculator */}
-            <OutbidCalculator
-              currentTopBidCents={topBidCents}
-              onClaimRank={(calculatedCents) => {
-                setClaimBidDollars((calculatedCents / 100).toString());
-                setIsRegisterOpen(true);
-              }}
-            />
-
             <LeaderboardTable
               items={items}
               isLoading={isLoading}
               scope="national"
               page={page}
               totalPages={totalPages}
+              totalCount={totalCount}
               onPageChange={setPage}
               onTopUpRestaurant={(restaurant) => {
                 setDetailsRestaurant(restaurant);
@@ -185,10 +197,12 @@ export default function NationalLeaderboardPage() {
             />
           </div>
 
-          {/* Right Column: Today's Ranking Sidebar Widget */}
+          {/* Right Column: Today's / All-Time Ranking Sidebar Widget */}
           <div className="lg:col-span-4 w-full sticky top-20">
             <SidebarToday
-              items={items}
+              items={sidebarItems.length > 0 ? sidebarItems : items}
+              title={timeframeTab === 'all-time' ? "Today's ranking" : "All-time ranking"}
+              onSeeAll={() => setTimeframeTab(timeframeTab === 'all-time' ? 'today' : 'all-time')}
               onSelectRestaurant={(restaurant) => {
                 setDetailsRestaurant(restaurant);
                 setIsDetailsOpen(true);
@@ -196,6 +210,9 @@ export default function NationalLeaderboardPage() {
             />
           </div>
         </div>
+
+        {/* 6. Public Project Stats & Attribution Section (Centered in Middle of Screen) */}
+        <PublicProjectStats totalCount={totalCount} />
       </main>
 
       {/* 6. Minimalist Outbid Footer */}
@@ -245,6 +262,18 @@ export default function NationalLeaderboardPage() {
         onSelectTopUp={(listing) => {
           setSelectedRestaurant(listing);
           setIsTopupOpen(true);
+        }}
+      />
+
+      {/* Full-Screen Hover Overlay Modal for Instant Outbid ROI Calculator */}
+      <CalculatorModal
+        isOpen={isCalculatorOpen}
+        onClose={() => setIsCalculatorOpen(false)}
+        currentTopBidCents={topBidCents}
+        onClaimRank={(calculatedCents) => {
+          setClaimBidDollars((calculatedCents / 100).toString());
+          setIsCalculatorOpen(false);
+          setIsRegisterOpen(true);
         }}
       />
     </div>

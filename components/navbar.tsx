@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { Crown, Search, Moon, Sun, ArrowUpRight } from 'lucide-react';
+import { Crown, Search, ArrowUpRight } from 'lucide-react';
 
 interface NavbarProps {
   onOpenRegister: () => void;
@@ -61,13 +61,6 @@ export function Navbar({ onOpenRegister, onOpenTopup, onOpenRules, onOpenSearch 
             title="Search entries"
           >
             <Search className="w-3.5 h-3.5 stroke-[1.8]" />
-          </button>
-
-          <button
-            className="p-2 rounded-full bg-stone-100/80 hover:bg-stone-200/80 text-stone-700 transition-colors border border-stone-200/50"
-            title="Toggle theme"
-          >
-            <Moon className="w-3.5 h-3.5 stroke-[1.8]" />
           </button>
         </div>
       </div>
