@@ -1,0 +1,44 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Restaurant {
+  id             String   @id @default(uuid())
+  name           String
+  normalizedName String   @map("normalized_name")
+  city           String
+  normalizedCity String   @map("normalized_city")
+  cuisine        String?
+  description    String?
+  logoUrl        String   @map("logo_url")
+  totalPaidCents Int      @default(0) @map("total_paid_cents")
+  ownerEditToken String   @unique @default(uuid()) @map("owner_edit_token")
+  status         String   @default("PENDING_PAYMENT") // PENDING_PAYMENT | VERIFIED
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  payments       Payment[]
+
+  @@index([normalizedCity, totalPaidCents(sort: Desc)])
+  @@index([totalPaidCents(sort: Desc)])
+  @@index([normalizedName, normalizedCity])
+  @@map("restaurants")
+}
+
+model Payment {
+  id                    String     @id @default(uuid())
+  restaurantId          String     @map("restaurant_id")
+  restaurant            Restaurant @relation(fields: [restaurantId], references: [id], onDelete: Cascade)
+  amountCents           Int        @map("amount_cents")
+  stripePaymentIntentId String?    @unique @map("stripe_payment_intent_id")
+  stripeSessionId       String?    @unique @map("stripe_session_id")
+  status                String     @default("PENDING") // PENDING | SUCCEEDED | FAILED
+  createdAt             DateTime   @default(now()) @map("created_at")
+
+  @@map("payments")
+}
