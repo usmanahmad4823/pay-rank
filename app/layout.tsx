@@ -27,8 +27,27 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const jsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: 'outbid.lol',
+    url: 'https://outbid.lol',
+    description: 'The world premier monetary public leaderboard directory. Claim a rank by total verified bid amount.',
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: 'https://outbid.lol/search?q={search_term_string}',
+      'query-input': 'required name=search_term_string',
+    },
+  };
+
   return (
     <html lang="en" className={`${outfit.variable} ${inter.variable} scroll-smooth`}>
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      </head>
       <body className="font-sans bg-[#FAF9F6] text-stone-900 min-h-screen flex flex-col antialiased selection:bg-coral-100 selection:text-coral-900">
         <ToastProvider>
           {children}

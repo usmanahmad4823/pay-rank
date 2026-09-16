@@ -2,10 +2,19 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { stripe, isMockPaymentEnabled } from '@/lib/stripe';
 import { normalizeString, formatCityName } from '@/lib/city-utils';
+import { checkRateLimit } from '@/lib/rate-limit';
 import { randomUUID } from 'crypto';
 
 export async function POST(request: NextRequest) {
   try {
+    const rateLimit = checkRateLimit(request, 10, 60000);
+    if (!rateLimit.success) {
+      return NextResponse.json(
+        { error: 'Too many registration requests. Please wait a minute and try again.' },
+        { status: 429 }
+      );
+    }
+
     const body = await request.json();
     const { name, city, cuisine, description, logoUrl, bidCents, allowDuplicate } = body;
 
