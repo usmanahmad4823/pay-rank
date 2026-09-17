@@ -49,7 +49,7 @@ export default function RulesPage() {
             </div>
             <h3 className="font-heading text-sm font-bold text-stone-900">1. Pure Monetary Ranking</h3>
             <p className="text-xs text-stone-500 leading-relaxed">
-              Every restaurant is ranked strictly by <code className="text-coral-600 font-mono">total_paid_cents</code> descending. The highest cumulative payer holds rank #1. Minimum entry bid is $1.00.
+              Every restaurant is ranked strictly by <code className="text-coral-600 font-mono">total_paid_cents</code> descending. The highest cumulative payer holds rank #1. Minimum entry bid is 10 PKR ($0.04).
             </p>
           </div>
 

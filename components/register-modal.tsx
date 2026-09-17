@@ -2,7 +2,8 @@
 
 import React, { useState } from 'react';
 import { X, Upload, DollarSign, ShieldAlert, Sparkles, Building2, MapPin, Utensils, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
-import { formatCurrency } from '@/lib/city-utils';
+import { formatCurrency, PROVINCES, resolveLocationDetails } from '@/lib/city-utils';
+import { useCurrency } from '@/components/currency-context';
 
 const PRESET_LOGOS = [
   'https://images.unsplash.com/photo-1550966871-3ed3cdb5ed0c?w=400&q=80',
@@ -32,8 +33,12 @@ export function RegisterModal({
   defaultBidDollars = '20',
   onDuplicateFound,
 }: RegisterModalProps) {
+  const { currency, currencySymbol, exchangeRate } = useCurrency();
   const [name, setName] = useState(defaultName);
   const [city, setCity] = useState(defaultCity);
+  const [province, setProvince] = useState<string>(
+    defaultCity ? resolveLocationDetails(defaultCity).province : 'Punjab'
+  );
   const [cuisine, setCuisine] = useState(defaultCuisine);
   const [description, setDescription] = useState('');
   const [logoUrl, setLogoUrl] = useState(PRESET_LOGOS[0]);
@@ -46,7 +51,10 @@ export function RegisterModal({
   React.useEffect(() => {
     if (isOpen) {
       if (defaultName) setName(defaultName);
-      if (defaultCity) setCity(defaultCity);
+      if (defaultCity) {
+        setCity(defaultCity);
+        setProvince(resolveLocationDetails(defaultCity).province);
+      }
       if (defaultCuisine) setCuisine(defaultCuisine);
       if (defaultBidDollars) setBidAmountDollars(defaultBidDollars);
     }
@@ -102,9 +110,13 @@ export function RegisterModal({
       return;
     }
 
-    const bidCents = Math.round(parseFloat(bidAmountDollars) * 100);
-    if (isNaN(bidCents) || bidCents < 100) {
-      setErrorMessage('Minimum entry bid is $1.00.');
+    const numVal = parseFloat(bidAmountDollars);
+    const bidCents = currency === 'PKR'
+      ? Math.round((numVal / exchangeRate) * 100)
+      : Math.round(numVal * 100);
+
+    if (isNaN(bidCents) || bidCents < 4) {
+      setErrorMessage('Minimum entry bid is 10 PKR ($0.04).');
       return;
     }
 
@@ -117,6 +129,7 @@ export function RegisterModal({
         body: JSON.stringify({
           name: name.trim(),
           city: city.trim(),
+          province,
           cuisine: cuisine.trim(),
           description: description.trim(),
           logoUrl,
@@ -140,9 +153,10 @@ export function RegisterModal({
         return;
       }
 
-      // Redirect to Stripe Checkout or Mock Success Page
-      if (data.stripeCheckoutUrl) {
-        window.location.href = data.stripeCheckoutUrl;
+      // Redirect to Safepay Checkout or Mock Success Page
+      const checkoutUrl = data.safepayCheckoutUrl || data.stripeCheckoutUrl;
+      if (checkoutUrl) {
+        window.location.href = checkoutUrl;
       }
     } catch (err) {
       console.error('Submission error:', err);
@@ -184,11 +198,11 @@ export function RegisterModal({
             </div>
           )}
 
-          {/* Restaurant Name & City */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* Name, City & Province */}
+          <div className="space-y-3">
             <div>
               <label className="block text-[11px] font-bold uppercase tracking-wider text-stone-700 mb-1">
-                Name / Handle <span className="text-coral-500">*</span>
+                Restaurant Name <span className="text-coral-500">*</span>
               </label>
               <input
                 type="text"
@@ -200,18 +214,44 @@ export function RegisterModal({
               />
             </div>
 
-            <div>
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-stone-700 mb-1">
-                City <span className="text-coral-500">*</span>
-              </label>
-              <input
-                type="text"
-                required
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                placeholder="e.g. Lahore, New York"
-                className="w-full px-3 py-2 rounded-xl bg-white border border-stone-200 text-stone-900 text-xs focus:outline-none focus:border-coral-500"
-              />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="relative">
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-stone-700 mb-1">
+                  City <span className="text-coral-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={city}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setCity(val);
+                    if (val.trim()) {
+                      const loc = resolveLocationDetails(val);
+                      setProvince(loc.province);
+                    }
+                  }}
+                  placeholder="e.g. Lahore, Karachi, Sheikhupura..."
+                  className="w-full px-3 py-2 rounded-xl bg-white border border-stone-200 text-stone-900 text-xs focus:outline-none focus:border-coral-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold uppercase tracking-wider text-stone-700 mb-1">
+                  Province / Region <span className="text-coral-500">*</span>
+                </label>
+                <select
+                  value={province}
+                  onChange={(e) => setProvince(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl bg-white border border-stone-200 text-stone-900 text-xs focus:outline-none focus:border-coral-500 font-medium"
+                >
+                  {PROVINCES.map((prov) => (
+                    <option key={prov} value={prov}>
+                      {prov}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
           </div>
 
@@ -284,23 +324,25 @@ export function RegisterModal({
           <div className="p-3.5 rounded-xl bg-stone-50 border border-stone-200 space-y-2">
             <div className="flex items-center justify-between">
               <label className="text-[11px] font-bold uppercase tracking-wider text-stone-800 flex items-center gap-1">
-                <DollarSign className="w-3.5 h-3.5 text-coral-500" /> Target Bid Amount (USD)
+                <DollarSign className="w-3.5 h-3.5 text-coral-500" /> Target Bid Amount ({currency})
               </label>
-              <span className="text-[11px] text-stone-500">Min: $1.00</span>
+              <span className="text-[11px] text-stone-500">
+                {currency === 'PKR' ? 'Min: 10 PKR' : 'Min: $0.04 (10 PKR)'}
+              </span>
             </div>
 
             <div className="relative">
-              <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-coral-500 font-extrabold text-base">
-                $
+              <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-coral-500 font-extrabold text-base pointer-events-none">
+                {currencySymbol}
               </span>
               <input
                 type="number"
-                min="1"
-                step="1"
+                min={currency === 'PKR' ? '10' : '0.04'}
+                step="any"
                 required
                 value={bidAmountDollars}
                 onChange={(e) => setBidAmountDollars(e.target.value)}
-                className="w-full pl-7 pr-3 py-2 rounded-xl bg-white border border-stone-200 text-coral-500 font-money font-black text-lg focus:outline-none focus:border-coral-500"
+                className="w-full pl-8 pr-3 py-2 rounded-xl bg-white border border-stone-200 text-coral-500 font-money font-black text-lg focus:outline-none focus:border-coral-500"
               />
             </div>
           </div>

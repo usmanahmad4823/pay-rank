@@ -53,7 +53,11 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
       const pkrVal = Math.round(usdVal * USD_TO_PKR);
       return `Rs ${pkrVal.toLocaleString()}`;
     }
-    return `$${usdVal.toLocaleString()}`;
+    const hasCents = cents % 100 !== 0;
+    return `$${usdVal.toLocaleString('en-US', {
+      minimumFractionDigits: hasCents ? 2 : 0,
+      maximumFractionDigits: 2,
+    })}`;
   };
 
   const formatDollars = (dollars: number): string => {
@@ -61,7 +65,11 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
       const pkrVal = Math.round(dollars * USD_TO_PKR);
       return `Rs ${pkrVal.toLocaleString()}`;
     }
-    return `$${dollars.toLocaleString()}`;
+    const hasCents = dollars % 1 !== 0;
+    return `$${dollars.toLocaleString('en-US', {
+      minimumFractionDigits: hasCents ? 2 : 0,
+      maximumFractionDigits: 2,
+    })}`;
   };
 
   const currencySymbol = currency === 'PKR' ? 'Rs ' : '$';

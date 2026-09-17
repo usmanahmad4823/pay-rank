@@ -11,23 +11,47 @@ interface OutbidCalculatorProps {
 }
 
 export function OutbidCalculator({ currentTopBidCents, onClaimRank }: OutbidCalculatorProps) {
-  const { formatAmount, currencySymbol } = useCurrency();
+  const { currency, formatAmount, currencySymbol, exchangeRate } = useCurrency();
   const [targetRank, setTargetRank] = useState<1 | 2 | 3>(1);
-  const [customBidDollars, setCustomBidDollars] = useState<string>(
-    ((currentTopBidCents + 1000) / 100).toString()
-  );
 
-  const calculatedCents = Math.max(1000, (parseFloat(customBidDollars) || 20) * 100);
+  // Default bid: outbid rank #1 by 10 PKR (4 cents)
+  const defaultInitialBidInput = React.useMemo(() => {
+    const requiredCents = currentTopBidCents > 0 ? currentTopBidCents + 4 : 2000;
+    if (currency === 'PKR') {
+      const pkrVal = Math.round((requiredCents / 100) * exchangeRate);
+      return pkrVal.toString();
+    }
+    return (requiredCents / 100).toFixed(2);
+  }, [currentTopBidCents, currency, exchangeRate]);
+
+  const [customBidInput, setCustomBidInput] = useState<string>(defaultInitialBidInput);
+
+  // Sync state if currency or currentTopBidCents changes
+  React.useEffect(() => {
+    setCustomBidInput(defaultInitialBidInput);
+  }, [defaultInitialBidInput]);
+
+  const numInput = parseFloat(customBidInput) || 0;
+  const calculatedCents = currency === 'PKR'
+    ? Math.max(4, Math.round((numInput / exchangeRate) * 100))
+    : Math.max(4, Math.round(numInput * 100));
+
   const estimatedDailyViews = Math.round(calculatedCents * 4.2);
   const estimatedMonthlyClicks = Math.round(calculatedCents * 1.8);
 
   const handleApplyRankPreset = (rank: 1 | 2 | 3) => {
     setTargetRank(rank);
-    let target = currentTopBidCents;
-    if (rank === 2) target = Math.round(currentTopBidCents * 0.7);
-    if (rank === 3) target = Math.round(currentTopBidCents * 0.5);
-    const required = target + 100;
-    setCustomBidDollars((required / 100).toString());
+    let target = currentTopBidCents > 0 ? currentTopBidCents : 2000;
+    if (rank === 2) target = Math.round(target * 0.7);
+    if (rank === 3) target = Math.round(target * 0.5);
+    const requiredCents = target + 4; // + 10 PKR / 4 cents
+
+    if (currency === 'PKR') {
+      const pkrVal = Math.round((requiredCents / 100) * exchangeRate);
+      setCustomBidInput(pkrVal.toString());
+    } else {
+      setCustomBidInput((requiredCents / 100).toFixed(2));
+    }
   };
 
   return (
@@ -77,16 +101,16 @@ export function OutbidCalculator({ currentTopBidCents, onClaimRank }: OutbidCalc
             Bid Amount ({currencySymbol.trim()})
           </label>
           <div className="relative">
-            <span className="absolute inset-y-0 left-0 pl-2.5 flex items-center text-coral-500 font-extrabold text-xs">
+            <span className="absolute inset-y-0 left-0 pl-2.5 flex items-center text-coral-500 font-extrabold text-xs pointer-events-none">
               {currencySymbol}
             </span>
             <input
               type="number"
-              min="10"
-              step="5"
-              value={customBidDollars}
-              onChange={(e) => setCustomBidDollars(e.target.value)}
-              className="w-full pl-7 pr-2 py-1.5 rounded-lg bg-white border border-stone-200/80 text-coral-500 font-money font-black text-sm focus:outline-none focus:border-coral-500"
+              min={currency === 'PKR' ? '10' : '0.04'}
+              step="any"
+              value={customBidInput}
+              onChange={(e) => setCustomBidInput(e.target.value)}
+              className="w-full pl-8 pr-2 py-1.5 rounded-lg bg-white border border-stone-200/80 text-coral-500 font-money font-black text-sm focus:outline-none focus:border-coral-500"
             />
           </div>
           <p className="text-[9px] text-stone-400">

@@ -11,6 +11,8 @@ export interface LeaderboardItem {
   name: string;
   city: string;
   normalizedCity: string;
+  province?: string | null;
+  normalizedProvince?: string | null;
   cuisine?: string | null;
   description?: string | null;
   logoUrl: string;
@@ -180,7 +182,7 @@ export function LeaderboardTable({
 
             {/* Middle Content (Title + Rating Pill, Description, Meta) */}
             <div className="min-w-0 flex-1 space-y-0.5">
-              {/* Title & Rating Pill */}
+              {/* Title, City Badge & Rating Pill */}
               <div className="flex items-center gap-2 flex-wrap min-w-0">
                 <h3
                   onClick={(e) => {
@@ -191,6 +193,15 @@ export function LeaderboardTable({
                 >
                   {item.name}
                 </h3>
+                {item.city && (
+                  <Link
+                    href={`/rankings/city/${item.normalizedCity.replace(/\s+/g, '-')}`}
+                    onClick={(e) => e.stopPropagation()}
+                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-600 hover:text-stone-900 text-[10px] font-bold border border-stone-200/60 transition-colors"
+                  >
+                    <span>in {item.city}</span>
+                  </Link>
+                )}
                 <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-stone-100/90 text-stone-700 text-[10px] font-bold border border-stone-200/60 flex-shrink-0">
                   <Star className="w-2.5 h-2.5 text-amber-500 fill-amber-500" />
                   <span>{ratingScore}</span>

@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { X, TrendingUp, Key, ShieldAlert, Sparkles, AlertCircle, Loader2 } from 'lucide-react';
 import { LeaderboardItem } from './leaderboard-table';
+import { useCurrency } from '@/components/currency-context';
 
 interface TopupModalProps {
   isOpen: boolean;
@@ -11,6 +12,7 @@ interface TopupModalProps {
 }
 
 export function TopupModal({ isOpen, onClose, targetRestaurant }: TopupModalProps) {
+  const { currency, currencySymbol, exchangeRate } = useCurrency();
   const [tokenInput, setTokenInput] = useState('');
   const [addAmountDollars, setAddAmountDollars] = useState('25');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -27,9 +29,13 @@ export function TopupModal({ isOpen, onClose, targetRestaurant }: TopupModalProp
       return;
     }
 
-    const addCents = Math.round(parseFloat(addAmountDollars) * 100);
-    if (isNaN(addCents) || addCents < 100) {
-      setErrorMessage('Minimum top-up amount is $1.00.');
+    const numVal = parseFloat(addAmountDollars);
+    const addCents = currency === 'PKR'
+      ? Math.round((numVal / exchangeRate) * 100)
+      : Math.round(numVal * 100);
+
+    if (isNaN(addCents) || addCents < 4) {
+      setErrorMessage('Minimum top-up amount is 10 PKR ($0.04).');
       return;
     }
 
@@ -58,8 +64,9 @@ export function TopupModal({ isOpen, onClose, targetRestaurant }: TopupModalProp
         return;
       }
 
-      if (data.stripeCheckoutUrl) {
-        window.location.href = data.stripeCheckoutUrl;
+      const checkoutUrl = data.safepayCheckoutUrl || data.stripeCheckoutUrl;
+      if (checkoutUrl) {
+        window.location.href = checkoutUrl;
       }
     } catch (err) {
       console.error('Top-up error:', err);
@@ -136,21 +143,26 @@ export function TopupModal({ isOpen, onClose, targetRestaurant }: TopupModalProp
 
           {/* Top-Up Amount */}
           <div>
-            <label className="block text-[11px] font-bold uppercase tracking-wider text-stone-700 mb-1">
-              Top-Up Amount (USD) <span className="text-coral-500">*</span>
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-stone-700">
+                Top-Up Amount ({currency}) <span className="text-coral-500">*</span>
+              </label>
+              <span className="text-[11px] text-stone-500">
+                {currency === 'PKR' ? 'Min: 10 PKR' : 'Min: $0.04 (10 PKR)'}
+              </span>
+            </div>
             <div className="relative">
-              <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-coral-500 font-bold text-base">
-                +$
+              <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-coral-500 font-bold text-base pointer-events-none">
+                +{currencySymbol}
               </span>
               <input
                 type="number"
-                min="1"
-                step="1"
+                min={currency === 'PKR' ? '10' : '0.04'}
+                step="any"
                 required
                 value={addAmountDollars}
                 onChange={(e) => setAddAmountDollars(e.target.value)}
-                className="w-full pl-9 pr-3 py-2 rounded-xl bg-white border border-stone-200 text-coral-500 font-money font-black text-lg focus:outline-none focus:border-coral-500"
+                className="w-full pl-10 pr-3 py-2 rounded-xl bg-white border border-stone-200 text-coral-500 font-money font-black text-lg focus:outline-none focus:border-coral-500"
               />
             </div>
           </div>

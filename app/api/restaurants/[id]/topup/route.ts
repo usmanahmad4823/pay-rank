@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { stripe, isMockPaymentEnabled } from '@/lib/stripe';
+import { createSafepayTracker, getSafepayCheckoutUrl } from '@/lib/safepay';
 
 export async function POST(
   request: NextRequest,
@@ -16,8 +17,8 @@ export async function POST(
     }
 
     const parsedAddCents = parseInt(addCents, 10);
-    if (isNaN(parsedAddCents) || parsedAddCents < 100) {
-      return NextResponse.json({ error: 'Minimum top-up amount is $1.00 (100 cents).' }, { status: 400 });
+    if (isNaN(parsedAddCents) || parsedAddCents < 4) {
+      return NextResponse.json({ error: 'Minimum top-up amount is 10 PKR ($0.04).' }, { status: 400 });
     }
 
     // Verify restaurant and owner token
@@ -39,57 +40,49 @@ export async function POST(
         restaurantId: restaurant.id,
         amountCents: parsedAddCents,
         status: 'PENDING',
+        paymentMethod: 'safepay',
       },
     });
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
-    if (isMockPaymentEnabled() || !stripe) {
-      const mockCheckoutUrl = `${appUrl}/checkout/success?session_id=mock_topup_${payment.id}&restaurant_id=${restaurant.id}&payment_id=${payment.id}&token=${restaurant.ownerEditToken}&topup=true`;
+    // Safepay Checkout Session Creation
+    const redirectUrl = `${appUrl}/checkout/success?restaurant_id=${restaurant.id}&payment_id=${payment.id}&token=${restaurant.ownerEditToken}&topup=true`;
+    const cancelUrl = `${appUrl}/?canceled=true`;
 
-      return NextResponse.json({
-        stripeCheckoutUrl: mockCheckoutUrl,
-        paymentId: payment.id,
-        isMock: true,
-      });
-    }
-
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ['card'],
-      line_items: [
-        {
-          price_data: {
-            currency: 'usd',
-            product_data: {
-              name: `Rank Top-Up: ${restaurant.name}`,
-              description: `Additional $${(parsedAddCents / 100).toFixed(2)} top-up for ${restaurant.name} in ${restaurant.city} (Non-Refundable)`,
-              images: restaurant.logoUrl.startsWith('http') ? [restaurant.logoUrl] : undefined,
-            },
-            unit_amount: parsedAddCents,
-          },
-          quantity: 1,
-        },
-      ],
-      mode: 'payment',
-      success_url: `${appUrl}/checkout/success?session_id={CHECKOUT_SESSION_ID}&restaurant_id=${restaurant.id}&token=${restaurant.ownerEditToken}&topup=true`,
-      cancel_url: `${appUrl}/?canceled=true`,
+    const { trackerToken, isMock } = await createSafepayTracker({
+      amountCents: parsedAddCents,
+      currency: 'PKR',
+      orderId: payment.id,
       metadata: {
         type: 'rank_topup',
         restaurantId: restaurant.id,
         paymentId: payment.id,
-        amountCents: parsedAddCents.toString(),
       },
     });
 
+    const safepayCheckoutUrl = (isMock || isMockPaymentEnabled())
+      ? `${appUrl}/checkout/success?session_id=mock_topup_${payment.id}&restaurant_id=${restaurant.id}&payment_id=${payment.id}&token=${restaurant.ownerEditToken}&topup=true`
+      : getSafepayCheckoutUrl({
+          trackerToken,
+          orderId: payment.id,
+          redirectUrl,
+          cancelUrl,
+        });
+
     await prisma.payment.update({
       where: { id: payment.id },
-      data: { stripeSessionId: session.id },
+      data: {
+        safepayTracker: trackerToken,
+        paymentMethod: 'safepay',
+      },
     });
 
     return NextResponse.json({
-      stripeCheckoutUrl: session.url,
+      safepayCheckoutUrl,
+      stripeCheckoutUrl: safepayCheckoutUrl, // backwards-compatible alias
       paymentId: payment.id,
-      isMock: false,
+      isMock,
     });
   } catch (error) {
     console.error('Error processing top-up:', error);

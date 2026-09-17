@@ -1,47 +1,96 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { formatCityName } from '@/lib/city-utils';
+import { cityToSlug, provinceToSlug, resolveLocationDetails } from '@/lib/city-utils';
 
-export async function GET() {
+export const dynamic = 'force-dynamic';
+
+export async function GET(request: NextRequest) {
   try {
-    const citiesGroup = await prisma.restaurant.groupBy({
-      by: ['normalizedCity'],
-      where: {
-        status: 'VERIFIED',
-      },
-      _count: {
+    // Fetch all verified restaurants ordered by totalPaidCents DESC
+    const restaurants = await prisma.restaurant.findMany({
+      where: { status: 'VERIFIED' },
+      select: {
         id: true,
-      },
-      _sum: {
+        name: true,
+        city: true,
+        normalizedCity: true,
+        province: true,
+        normalizedProvince: true,
+        description: true,
+        logoUrl: true,
         totalPaidCents: true,
+        createdAt: true,
       },
-      orderBy: {
-        _sum: {
-          totalPaidCents: 'desc',
-        },
-      },
+      orderBy: [
+        { totalPaidCents: 'desc' },
+        { createdAt: 'asc' },
+      ],
     });
 
-    // Also fetch sample original city string for nice formatting
-    const cities = await Promise.all(
-      citiesGroup.map(async (group) => {
-        const sample = await prisma.restaurant.findFirst({
-          where: { normalizedCity: group.normalizedCity, status: 'VERIFIED' },
-          select: { city: true },
+    // Group by normalizedCity
+    const cityMap = new Map<string, {
+      city: string;
+      citySlug: string;
+      province: string;
+      provinceSlug: string;
+      restaurantCount: number;
+      totalCityVolumeCents: number;
+      topRestaurants: Array<{
+        id: string;
+        name: string;
+        description?: string | null;
+        logoUrl: string;
+        totalPaidCents: number;
+      }>;
+    }>();
+
+    for (const r of restaurants) {
+      const loc = resolveLocationDetails(r.city, r.province);
+      const key = loc.normalizedCity;
+
+      if (!cityMap.has(key)) {
+        cityMap.set(key, {
+          city: loc.displayCity,
+          citySlug: loc.citySlug,
+          province: loc.province,
+          provinceSlug: loc.provinceSlug,
+          restaurantCount: 1,
+          totalCityVolumeCents: r.totalPaidCents,
+          topRestaurants: [
+            {
+              id: r.id,
+              name: r.name,
+              description: r.description,
+              logoUrl: r.logoUrl,
+              totalPaidCents: r.totalPaidCents,
+            },
+          ],
         });
+      } else {
+        const existing = cityMap.get(key)!;
+        existing.restaurantCount += 1;
+        existing.totalCityVolumeCents += r.totalPaidCents;
+        if (existing.topRestaurants.length < 3) {
+          existing.topRestaurants.push({
+            id: r.id,
+            name: r.name,
+            description: r.description,
+            logoUrl: r.logoUrl,
+            totalPaidCents: r.totalPaidCents,
+          });
+        }
+      }
+    }
 
-        return {
-          normalizedCity: group.normalizedCity,
-          displayName: sample?.city ? formatCityName(sample.city) : formatCityName(group.normalizedCity),
-          count: group._count.id,
-          totalPaidCents: group._sum.totalPaidCents || 0,
-        };
-      })
-    );
+    const cityList = Array.from(cityMap.values()).sort((a, b) => b.totalCityVolumeCents - a.totalCityVolumeCents);
 
-    return NextResponse.json({ cities });
+    return NextResponse.json({
+      success: true,
+      cities: cityList,
+      totalCities: cityList.length,
+    });
   } catch (error) {
-    console.error('Error fetching cities:', error);
-    return NextResponse.json({ error: 'Failed to fetch cities' }, { status: 500 });
+    console.error('Error fetching city directory API:', error);
+    return NextResponse.json({ error: 'Failed to fetch city directory' }, { status: 500 });
   }
 }

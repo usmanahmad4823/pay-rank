@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Crown, Search, ArrowUpRight } from 'lucide-react';
 import { useCurrency } from '@/components/currency-context';
 
@@ -14,17 +15,21 @@ interface NavbarProps {
 
 export function Navbar({ onOpenRegister, onOpenTopup, onOpenRules, onOpenSearch }: NavbarProps) {
   const { currency, setCurrency } = useCurrency();
+  const pathname = usePathname();
+
+  const isDailyActive = pathname === '/';
+  const isCitiesActive = pathname.startsWith('/cities') || pathname.startsWith('/rankings') || pathname.startsWith('/city');
 
   return (
     <header className="sticky top-0 z-40 w-full bg-white/80 backdrop-blur-xl border-b border-black/[0.06] transition-all">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-3 text-xs">
+      <div className="max-w-6xl mx-auto px-3 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-2 sm:gap-3 text-xs">
         {/* Logo & Online Status Pill */}
-        <div className="flex items-center gap-3">
-          <Link href="/" className="flex items-center gap-2 group">
-            <div className="w-7 h-7 rounded-xl bg-stone-900 text-white flex items-center justify-center font-bold shadow-xs group-hover:scale-105 transition-transform">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          <Link href="/" className="flex items-center gap-1.5 sm:gap-2 group">
+            <div className="w-7 h-7 rounded-xl bg-stone-900 text-white flex items-center justify-center font-bold shadow-xs group-hover:scale-105 transition-transform shrink-0">
               <Crown className="w-3.5 h-3.5 text-coral-500 fill-coral-500" />
             </div>
-            <span className="font-heading font-extrabold text-base text-stone-900 tracking-tight">
+            <span className="font-heading font-extrabold text-sm sm:text-base text-stone-900 tracking-tight whitespace-nowrap">
               payrank<span className="text-coral-500 font-black">.lol</span>
             </span>
           </Link>
@@ -41,29 +46,43 @@ export function Navbar({ onOpenRegister, onOpenTopup, onOpenRules, onOpenSearch 
         </div>
 
         {/* Navigation Links */}
-        <nav className="flex items-center gap-4 sm:gap-6 font-medium text-stone-500 text-xs">
-          <Link href="/" className="hover:text-stone-900 transition-colors">
+        <nav className="flex items-center gap-3 sm:gap-6 font-medium text-stone-500 text-xs sm:text-xs shrink min-w-0 overflow-hidden">
+          <Link
+            href="/"
+            className={`transition-colors whitespace-nowrap ${
+              isDailyActive
+                ? 'font-bold text-coral-600'
+                : 'text-stone-500 hover:text-stone-900 font-medium'
+            }`}
+          >
             Daily
           </Link>
-          <a href="#categories" className="hover:text-stone-900 transition-colors hidden xs:inline">
-            Categories
-          </a>
-          <button onClick={onOpenRules} className="hover:text-stone-900 transition-colors">
+          <Link
+            href="/cities"
+            className={`transition-colors whitespace-nowrap ${
+              isCitiesActive
+                ? 'font-bold text-coral-600'
+                : 'text-stone-500 hover:text-stone-900 font-medium'
+            }`}
+          >
+            Cities
+          </Link>
+          <button onClick={onOpenRules} className="hover:text-stone-900 transition-colors whitespace-nowrap text-stone-500 font-medium">
             About
           </button>
-          <button onClick={onOpenRules} className="hover:text-stone-900 transition-colors">
+          <button onClick={onOpenRules} className="hover:text-stone-900 transition-colors whitespace-nowrap text-stone-500 font-medium">
             Rules
           </button>
         </nav>
 
         {/* Right Icon Actions */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           {/* Currency Switcher Toggle Pill */}
-          <div className="inline-flex items-center p-0.5 rounded-full bg-stone-100/90 border border-stone-200/80 text-[11px] font-bold shadow-xs">
+          <div className="inline-flex items-center p-0.5 rounded-full bg-stone-100/90 border border-stone-200/80 text-[10px] sm:text-[11px] font-bold shadow-xs shrink-0 whitespace-nowrap select-none">
             <button
               type="button"
               onClick={() => setCurrency('USD')}
-              className={`px-2.5 py-1 rounded-full transition-all cursor-pointer ${
+              className={`px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full transition-all cursor-pointer whitespace-nowrap flex items-center justify-center leading-none ${
                 currency === 'USD'
                   ? 'bg-coral-500 text-white shadow-coral-pill font-extrabold'
                   : 'text-stone-600 hover:text-stone-900 font-semibold'
@@ -75,7 +94,7 @@ export function Navbar({ onOpenRegister, onOpenTopup, onOpenRules, onOpenSearch 
             <button
               type="button"
               onClick={() => setCurrency('PKR')}
-              className={`px-2.5 py-1 rounded-full transition-all cursor-pointer ${
+              className={`px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full transition-all cursor-pointer whitespace-nowrap flex items-center justify-center leading-none ${
                 currency === 'PKR'
                   ? 'bg-coral-500 text-white shadow-coral-pill font-extrabold'
                   : 'text-stone-600 hover:text-stone-900 font-semibold'
@@ -88,7 +107,7 @@ export function Navbar({ onOpenRegister, onOpenTopup, onOpenRules, onOpenSearch 
 
           <button
             onClick={onOpenSearch || onOpenRegister}
-            className="p-2 rounded-full bg-stone-100/80 hover:bg-stone-200/80 text-stone-700 transition-colors border border-stone-200/50"
+            className="p-1.5 sm:p-2 rounded-full bg-stone-100/80 hover:bg-stone-200/80 text-stone-700 transition-colors border border-stone-200/50 shrink-0"
             title="Search entries"
           >
             <Search className="w-3.5 h-3.5 stroke-[1.8]" />

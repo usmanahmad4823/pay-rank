@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { isMockPaymentEnabled } from '@/lib/stripe';
+import { verifySafepayTrackerStatus } from '@/lib/safepay';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,21 +29,42 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Restaurant record not found.' }, { status: 404 });
     }
 
-    // Handles mock checkout auto-verification in dev/testing mode
-    if (isMockPaymentEnabled() || sessionId.startsWith('mock_')) {
-      // Find pending payment for this restaurant
-      const pendingPayment = paymentId
-        ? await prisma.payment.findUnique({ where: { id: paymentId } })
-        : await prisma.payment.findFirst({
-            where: { restaurantId: restaurant.id, status: 'PENDING' },
-            orderBy: { createdAt: 'desc' },
-          });
+    // Check target payment
+    const pendingPayment = paymentId
+      ? await prisma.payment.findUnique({ where: { id: paymentId } })
+      : await prisma.payment.findFirst({
+          where: { restaurantId: restaurant.id, status: 'PENDING' },
+          orderBy: { createdAt: 'desc' },
+        });
 
-      if (pendingPayment && pendingPayment.status === 'PENDING') {
+    // 1. Handles mock checkout auto-verification in dev/testing mode
+    if ((isMockPaymentEnabled() || sessionId.startsWith('mock_')) && pendingPayment && pendingPayment.status === 'PENDING') {
+      await prisma.$transaction([
+        prisma.payment.update({
+          where: { id: pendingPayment.id },
+          data: { status: 'SUCCEEDED', paymentMethod: 'safepay' },
+        }),
+        prisma.restaurant.update({
+          where: { id: restaurant.id },
+          data: {
+            status: 'VERIFIED',
+            totalPaidCents: { increment: pendingPayment.amountCents },
+          },
+        }),
+      ]);
+
+      // Refetch updated restaurant
+      restaurant = await prisma.restaurant.findUnique({
+        where: { id: restaurant.id },
+      });
+    } else if (pendingPayment && pendingPayment.status === 'PENDING' && pendingPayment.safepayTracker) {
+      // 2. Safepay server-to-server verification fallback
+      const safepayCheck = await verifySafepayTrackerStatus(pendingPayment.safepayTracker);
+      if (safepayCheck.paid) {
         await prisma.$transaction([
           prisma.payment.update({
             where: { id: pendingPayment.id },
-            data: { status: 'SUCCEEDED' },
+            data: { status: 'SUCCEEDED', paymentMethod: 'safepay' },
           }),
           prisma.restaurant.update({
             where: { id: restaurant.id },
@@ -53,7 +75,6 @@ export async function GET(request: NextRequest) {
           }),
         ]);
 
-        // Refetch updated restaurant
         restaurant = await prisma.restaurant.findUnique({
           where: { id: restaurant.id },
         });
@@ -68,19 +89,33 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Calculate current city rank & national rank
+    // Calculate current city rank & national rank with deterministic tie-breaking (Primary: higher totalPaidCents, Secondary: earlier createdAt)
     const higherPaidInCity = await prisma.restaurant.count({
       where: {
         status: 'VERIFIED',
         normalizedCity: restaurant.normalizedCity,
-        totalPaidCents: { gt: restaurant.totalPaidCents },
+        OR: [
+          { totalPaidCents: { gt: restaurant.totalPaidCents } },
+          {
+            totalPaidCents: restaurant.totalPaidCents,
+            createdAt: { lt: restaurant.createdAt },
+            id: { not: restaurant.id },
+          },
+        ],
       },
     });
 
     const higherPaidNationally = await prisma.restaurant.count({
       where: {
         status: 'VERIFIED',
-        totalPaidCents: { gt: restaurant.totalPaidCents },
+        OR: [
+          { totalPaidCents: { gt: restaurant.totalPaidCents } },
+          {
+            totalPaidCents: restaurant.totalPaidCents,
+            createdAt: { lt: restaurant.createdAt },
+            id: { not: restaurant.id },
+          },
+        ],
       },
     });
 

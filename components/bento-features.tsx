@@ -136,12 +136,12 @@ export function BentoFeatures() {
               </div>
 
               <h3 className="font-heading font-extrabold text-2xl text-slate-900">
-                $1 Minimum Entry • Zero Recurring Subscriptions
+                10 PKR Minimum Entry • Zero Recurring Subscriptions
               </h3>
             </div>
 
             <div className="px-4 py-3 rounded-2xl bg-blue-50 border border-blue-200 text-center">
-              <div className="text-2xl font-black text-blue-600">$1.00</div>
+              <div className="text-2xl font-black text-blue-600">10 PKR</div>
               <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Minimum Lifetime Bid</div>
             </div>
           </div>

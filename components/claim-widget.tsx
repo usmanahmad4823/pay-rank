@@ -15,23 +15,23 @@ interface ClaimWidgetProps {
 export function ClaimWidget({ currentTopBidCents, onClaimRank, onOpenCalculator }: ClaimWidgetProps) {
   const { formatAmount } = useCurrency();
 
-  // Target bid defaults to top bid + $1 (or $20 if board is empty)
-  const defaultTargetCents = currentTopBidCents > 0 ? currentTopBidCents + 100 : 2000;
+  // Target bid defaults to top bid + min outbid (4 cents / 10 PKR) so user outbids #1
+  const defaultTargetCents = currentTopBidCents > 0 ? currentTopBidCents + 4 : 2000;
   const [targetCents, setTargetCents] = useState<number>(defaultTargetCents);
   const [inputName, setInputName] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Pakistani');
 
-  // Keep targetCents synced with current #1 position bid when timeframe/category data loads
+  // Keep targetCents synced with current #1 position bid plus 10 PKR outbid increment
   useEffect(() => {
     if (currentTopBidCents > 0) {
-      setTargetCents(currentTopBidCents + 100);
+      setTargetCents(currentTopBidCents + 4);
     } else {
       setTargetCents(2000);
     }
   }, [currentTopBidCents]);
 
-  const increment = () => setTargetCents((prev) => prev + 100); // +$1
-  const decrement = () => setTargetCents((prev) => Math.max(100, prev - 100)); // -$1
+  const increment = () => setTargetCents((prev) => prev + 4); // +10 PKR (4 cents)
+  const decrement = () => setTargetCents((prev) => Math.max(currentTopBidCents + 4, prev - 4));
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

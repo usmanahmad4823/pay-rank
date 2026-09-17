@@ -1,36 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { normalizeString, formatCityName, resolveLocationDetails, slugToProvince } from '@/lib/city-utils';
+import { normalizeString, slugToProvince, provinceToSlug } from '@/lib/city-utils';
 
 export const dynamic = 'force-dynamic';
 
-export async function GET(request: NextRequest) {
+export async function GET(
+  request: NextRequest,
+  { params }: { params: { provinceSlug: string } }
+) {
   try {
+    const rawSlug = params.provinceSlug || '';
+    const province = slugToProvince(rawSlug);
+    const targetNormalizedProvince = normalizeString(province);
+
     const { searchParams } = new URL(request.url);
-    const scope = searchParams.get('scope') || 'national';
-    const rawCity = searchParams.get('city') || '';
-    const rawProvince = searchParams.get('province') || searchParams.get('provinceSlug') || '';
     const search = searchParams.get('search') || '';
     const cuisine = searchParams.get('cuisine') || '';
     const timeframe = searchParams.get('timeframe') || 'all-time';
-    const page = parseInt(searchParams.get('page') || '1', 10);
-    const limit = parseInt(searchParams.get('limit') || '30', 10);
+    const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
+    const limit = Math.max(1, parseInt(searchParams.get('limit') || '30', 10));
     const skip = (page - 1) * limit;
 
-    const location = resolveLocationDetails(rawCity, rawProvince);
-    const normalizedCity = location.normalizedCity;
-    const normalizedProvince = rawProvince ? normalizeString(slugToProvince(rawProvince)) : location.normalizedProvince;
     const normalizedSearch = normalizeString(search);
 
     const whereClause: any = {
       status: 'VERIFIED',
+      normalizedProvince: targetNormalizedProvince,
     };
-
-    if (scope === 'city' && normalizedCity) {
-      whereClause.normalizedCity = normalizedCity;
-    } else if (scope === 'province' && normalizedProvince) {
-      whereClause.normalizedProvince = normalizedProvince;
-    }
 
     if (normalizedSearch) {
       whereClause.OR = [
@@ -42,16 +38,13 @@ export async function GET(request: NextRequest) {
     }
 
     if (cuisine && cuisine.toLowerCase() !== 'all') {
-      whereClause.cuisine = {
-        contains: cuisine,
-      };
+      whereClause.cuisine = { contains: cuisine };
     }
 
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-
     if (timeframe === 'today') {
-      // 1. Fetch all restaurants matching scope, search, and category filters
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+
       const allMatching = await prisma.restaurant.findMany({
         where: whereClause,
         select: {
@@ -59,6 +52,8 @@ export async function GET(request: NextRequest) {
           name: true,
           city: true,
           normalizedCity: true,
+          province: true,
+          normalizedProvince: true,
           cuisine: true,
           description: true,
           logoUrl: true,
@@ -72,10 +67,8 @@ export async function GET(request: NextRequest) {
         },
       });
 
-      // 2. Compute todayPaidCents for each restaurant
       const itemsWithToday = allMatching.map((r) => {
         const sumToday = r.payments.reduce((acc, p) => acc + p.amountCents, 0);
-        // If today sum is present, use it; otherwise compute realistic today investment fraction
         const todayAmount = sumToday > 0 ? sumToday : Math.round(r.totalPaidCents * 0.4);
         return {
           ...r,
@@ -83,7 +76,6 @@ export async function GET(request: NextRequest) {
         };
       });
 
-      // 3. Sort strictly by Today's Investment Volume (DESC)
       itemsWithToday.sort((a, b) => b.todayPaidCents - a.todayPaidCents);
 
       const totalCount = itemsWithToday.length;
@@ -94,31 +86,30 @@ export async function GET(request: NextRequest) {
         name: item.name,
         city: item.city,
         normalizedCity: item.normalizedCity,
+        province: item.province,
+        normalizedProvince: item.normalizedProvince,
         cuisine: item.cuisine,
         description: item.description,
         logoUrl: item.logoUrl,
-        totalPaidCents: item.todayPaidCents, // Display Today's Investment Amount!
+        totalPaidCents: item.todayPaidCents,
         createdAt: item.createdAt,
         updatedAt: item.updatedAt,
         rank: skip + index + 1,
       }));
 
       return NextResponse.json({
-        scope,
+        scope: 'province',
+        province,
+        provinceSlug: provinceToSlug(province),
         page,
         limit,
         totalCount,
         totalPages: Math.ceil(totalCount / limit) || 1,
         items: rankedItems,
-        cityStats: null,
-        nationalStats: {
-          totalRestaurants: totalCount,
-          totalPaidCents: itemsWithToday.reduce((sum, item) => sum + item.todayPaidCents, 0),
-        },
       });
     }
 
-    // Default: All-Time Rankings (sorted by total lifetime investment DESC)
+    // Default: All-Time Rankings
     const [totalCount, items] = await Promise.all([
       prisma.restaurant.count({ where: whereClause }),
       prisma.restaurant.findMany({
@@ -134,6 +125,8 @@ export async function GET(request: NextRequest) {
           name: true,
           city: true,
           normalizedCity: true,
+          province: true,
+          normalizedProvince: true,
           cuisine: true,
           description: true,
           logoUrl: true,
@@ -144,51 +137,23 @@ export async function GET(request: NextRequest) {
       }),
     ]);
 
-    // Attach 1-based rank position
     const rankedItems = items.map((item, index) => ({
       ...item,
       rank: skip + index + 1,
     }));
 
-    // Calculate city aggregated statistics if scope is city
-    let cityStats = null;
-    if (scope === 'city' && normalizedCity) {
-      const agg = await prisma.restaurant.aggregate({
-        where: { status: 'VERIFIED', normalizedCity },
-        _sum: { totalPaidCents: true },
-        _count: { id: true },
-      });
-
-      cityStats = {
-        city: formatCityName(rawCity),
-        normalizedCity,
-        restaurantCount: agg._count.id || 0,
-        totalPaidCents: agg._sum.totalPaidCents || 0,
-      };
-    }
-
-    // National statistics
-    const nationalAgg = await prisma.restaurant.aggregate({
-      where: { status: 'VERIFIED' },
-      _sum: { totalPaidCents: true },
-      _count: { id: true },
-    });
-
     return NextResponse.json({
-      scope,
+      scope: 'province',
+      province,
+      provinceSlug: provinceToSlug(province),
       page,
       limit,
       totalCount,
       totalPages: Math.ceil(totalCount / limit) || 1,
       items: rankedItems,
-      cityStats,
-      nationalStats: {
-        totalRestaurants: nationalAgg._count.id || 0,
-        totalPaidCents: nationalAgg._sum.totalPaidCents || 0,
-      },
     });
   } catch (error) {
-    console.error('Error fetching leaderboard:', error);
-    return NextResponse.json({ error: 'Failed to fetch leaderboard' }, { status: 500 });
+    console.error('Error fetching province ranking API:', error);
+    return NextResponse.json({ error: 'Failed to fetch province ranking' }, { status: 500 });
   }
 }
