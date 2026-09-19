@@ -27,14 +27,15 @@ export function PublicProjectStats({ totalCount }: PublicProjectStatsProps) {
     async function recordAndFetchStats() {
       try {
         // 1. Record pageview visit in real-time database (non-blocking)
-        fetch('/api/track-visit', {
+        fetch(`/api/track-visit?t=${Date.now()}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          cache: 'no-store',
           body: JSON.stringify({ path: typeof window !== 'undefined' ? window.location.pathname : '/' }),
         }).catch(() => {});
 
         // 2. Fetch updated real-time stats from database
-        const res = await fetch('/api/stats');
+        const res = await fetch(`/api/stats?t=${Date.now()}`, { cache: 'no-store' });
         const data = await res.json();
 
         if (data && data.success && isMounted) {

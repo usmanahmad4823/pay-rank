@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export async function GET() {
   try {
@@ -116,20 +117,29 @@ export async function GET() {
     const launchDate = new Date('2026-08-23T00:00:00Z');
     const daysSinceLaunch = Math.max(1, Math.floor((Date.now() - launchDate.getTime()) / (1000 * 60 * 60 * 24)));
 
-    return NextResponse.json({
-      success: true,
-      totalRevenueCents,
-      totalVerifiedRestaurants,
-      activeCitiesCount,
-      todayBidsCount,
-      todayVolumeCents,
-      totalPaymentsCount,
-      baseVisitors,
-      todayVisitors,
-      onlineCount,
-      daysSinceLaunch,
-      recentEvents,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        totalRevenueCents,
+        totalVerifiedRestaurants,
+        activeCitiesCount,
+        todayBidsCount,
+        todayVolumeCents,
+        totalPaymentsCount,
+        baseVisitors,
+        todayVisitors,
+        onlineCount,
+        daysSinceLaunch,
+        recentEvents,
+      },
+      {
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+        },
+      }
+    );
   } catch (error: any) {
     console.error('Failed to fetch realtime stats API:', error);
     return NextResponse.json({ error: 'Failed to fetch realtime stats' }, { status: 500 });

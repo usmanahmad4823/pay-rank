@@ -29,7 +29,7 @@ export function Navbar({ onOpenRegister, onOpenTopup, onOpenRules, onOpenSearch 
   useEffect(() => {
     async function fetchStats() {
       try {
-        const res = await fetch('/api/stats');
+        const res = await fetch(`/api/stats?t=${Date.now()}`, { cache: 'no-store' });
         const data = await res.json();
         if (data.success) {
           setLiveStats({
