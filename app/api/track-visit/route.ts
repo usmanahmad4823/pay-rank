@@ -3,43 +3,42 @@ import { prisma } from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
+export const fetchCache = 'force-no-store';
+
+const TRANSPARENT_GIF_BUFFER = Buffer.from(
+  'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
+  'base64'
+);
 
 async function recordVisit(path: string, request: NextRequest) {
-  const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || '127.0.0.1';
+  try {
+    const ip = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || '127.0.0.1';
 
-  // 1. Record PageView
-  await prisma.pageView.create({
-    data: {
-      path,
-      ip: ip.split(',')[0].trim(),
-    },
-  }).catch((e) => console.error('PageView record error:', e));
+    // 1. Record PageView in database
+    await prisma.pageView.create({
+      data: {
+        path: path || '/',
+        ip: ip.split(',')[0].trim(),
+      },
+    });
 
-  // 2. Increment SiteStats totalVisitors counter
-  const stats = await prisma.siteStats.upsert({
-    where: { id: 'global' },
-    update: {
-      totalVisitors: { increment: 1 },
-    },
-    create: {
-      id: 'global',
-      totalVisitors: 1,
-    },
-  });
+    // 2. Increment SiteStats totalVisitors counter in database
+    const stats = await prisma.siteStats.upsert({
+      where: { id: 'global' },
+      update: {
+        totalVisitors: { increment: 1 },
+      },
+      create: {
+        id: 'global',
+        totalVisitors: 1,
+      },
+    });
 
-  const startOfToday = new Date();
-  startOfToday.setHours(0, 0, 0, 0);
-
-  const todayVisitors = await prisma.pageView.count({
-    where: {
-      createdAt: { gte: startOfToday },
-    },
-  });
-
-  return {
-    totalVisitors: stats.totalVisitors,
-    todayVisitors,
-  };
+    return stats.totalVisitors;
+  } catch (error: any) {
+    console.error('Error recording visit:', error);
+    return 1;
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -52,24 +51,20 @@ export async function POST(request: NextRequest) {
       // Body parse optional
     }
 
-    const data = await recordVisit(path, request);
+    const totalVisitors = await recordVisit(path, request);
 
     return NextResponse.json(
-      {
-        success: true,
-        totalVisitors: data.totalVisitors,
-        todayVisitors: data.todayVisitors,
-      },
+      { success: true, totalVisitors },
       {
         headers: {
-          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
           'Pragma': 'no-cache',
           'Expires': '0',
         },
       }
     );
   } catch (error: any) {
-    console.error('Error tracking visitor pageview:', error);
+    console.error('Error in POST track-visit:', error);
     return NextResponse.json({ error: 'Failed to record visit' }, { status: 500 });
   }
 }
@@ -77,58 +72,34 @@ export async function POST(request: NextRequest) {
 export async function GET(request: NextRequest) {
   try {
     const url = new URL(request.url);
-    const track = url.searchParams.get('track');
+    const path = url.searchParams.get('path') || '/';
 
-    if (track === '1' || track === 'true') {
-      const data = await recordVisit('/', request);
-      return NextResponse.json(
-        {
-          success: true,
-          totalVisitors: data.totalVisitors,
-          todayVisitors: data.todayVisitors,
+    const totalVisitors = await recordVisit(path, request);
+
+    // If request format expects image (beacon)
+    if (url.searchParams.get('img') === '1' || url.searchParams.get('beacon') === '1') {
+      return new NextResponse(TRANSPARENT_GIF_BUFFER, {
+        headers: {
+          'Content-Type': 'image/gif',
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
+          'Pragma': 'no-cache',
+          'Expires': '0',
         },
-        {
-          headers: {
-            'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-            'Pragma': 'no-cache',
-            'Expires': '0',
-          },
-        }
-      );
+      });
     }
 
-    const stats = await prisma.siteStats.findUnique({
-      where: { id: 'global' },
-    });
-
-    const startOfToday = new Date();
-    startOfToday.setHours(0, 0, 0, 0);
-
-    const todayVisitors = await prisma.pageView.count({
-      where: {
-        createdAt: { gte: startOfToday },
-      },
-    });
-
-    const pageViewsCount = await prisma.pageView.count();
-    const totalCount = Math.max(1, stats?.totalVisitors || 0, pageViewsCount);
-
     return NextResponse.json(
-      {
-        success: true,
-        totalVisitors: totalCount,
-        todayVisitors,
-      },
+      { success: true, totalVisitors },
       {
         headers: {
-          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
           'Pragma': 'no-cache',
           'Expires': '0',
         },
       }
     );
   } catch (error: any) {
-    console.error('Error fetching visitor stats:', error);
-    return NextResponse.json({ error: 'Failed to fetch visitor stats' }, { status: 500 });
+    console.error('Error in GET track-visit:', error);
+    return NextResponse.json({ error: 'Failed to record visit' }, { status: 500 });
   }
 }

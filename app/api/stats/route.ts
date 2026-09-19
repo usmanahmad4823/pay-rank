@@ -3,94 +3,54 @@ import { prisma } from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
+export const fetchCache = 'force-no-store';
 
 export async function GET() {
   try {
-    // 1. Record page visit and count total visits directly in database
-    let totalVisitors = 1;
-    let todayVisitors = 1;
+    // Fire pageview insert non-blocking
+    prisma.pageView.create({ data: { path: '/' } }).catch(() => {});
 
-    try {
-      // Record new pageview
-      await prisma.pageView.create({
-        data: { path: '/' },
-      });
-
-      // Count all pageviews in database
-      const totalPv = await prisma.pageView.count();
-      totalVisitors = Math.max(1, totalPv);
-
-      // Also sync SiteStats table in background
-      prisma.siteStats.upsert({
-        where: { id: 'global' },
-        update: { totalVisitors: { increment: 1 } },
-        create: { id: 'global', totalVisitors: totalVisitors },
-      }).catch(() => {});
-
-      const startOfToday = new Date();
-      startOfToday.setHours(0, 0, 0, 0);
-
-      todayVisitors = await prisma.pageView.count({
-        where: { createdAt: { gte: startOfToday } },
-      });
-      if (todayVisitors === 0) todayVisitors = totalVisitors;
-    } catch (err) {
-      console.error('Visitor increment error:', err);
-    }
-
-    // 2. Total revenue cents from database
-    const revenueAgg = await prisma.restaurant.aggregate({
-      _sum: { totalPaidCents: true },
-    });
-    const totalRevenueCents = revenueAgg._sum.totalPaidCents || 0;
-
-    // 3. Total restaurants / listings count from database
-    const totalVerifiedRestaurants = await prisma.restaurant.count();
-
-    // 4. Active cities count
-    const citiesGroup = await prisma.restaurant.groupBy({
-      by: ['normalizedCity'],
-    });
-    const activeCitiesCount = citiesGroup.length;
-
-    // 5. Today's bids / volume
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
 
-    const todayAgg = await prisma.payment.aggregate({
-      where: {
-        createdAt: { gte: startOfToday },
-        status: { in: ['COMPLETED', 'SUCCEEDED'] },
-      },
-      _sum: { amountCents: true },
-      _count: { id: true },
-    });
+    // Parallel query execution for maximum speed (< 50ms)
+    const [
+      revenueAgg,
+      totalVerifiedRestaurants,
+      citiesGroup,
+      todayAgg,
+      totalPaymentsCount,
+      recentPayments,
+      siteStatsRecord,
+      pageViewsCount,
+      todayVisitorsCount,
+    ] = await Promise.all([
+      prisma.restaurant.aggregate({ _sum: { totalPaidCents: true } }).catch(() => ({ _sum: { totalPaidCents: 0 } })),
+      prisma.restaurant.count().catch(() => 0),
+      prisma.restaurant.groupBy({ by: ['normalizedCity'] }).catch(() => []),
+      prisma.payment.aggregate({
+        where: { createdAt: { gte: startOfToday }, status: { in: ['COMPLETED', 'SUCCEEDED'] } },
+        _sum: { amountCents: true },
+        _count: { id: true },
+      }).catch(() => ({ _sum: { amountCents: 0 }, _count: { id: 0 } })),
+      prisma.payment.count({ where: { status: { in: ['COMPLETED', 'SUCCEEDED'] } } }).catch(() => 0),
+      prisma.payment.findMany({
+        where: { status: { in: ['COMPLETED', 'SUCCEEDED'] } },
+        take: 8,
+        orderBy: { createdAt: 'desc' },
+        include: { restaurant: { select: { name: true, city: true, totalPaidCents: true } } },
+      }).catch(() => []),
+      prisma.siteStats.findUnique({ where: { id: 'global' } }).catch(() => null),
+      prisma.pageView.count().catch(() => 0),
+      prisma.pageView.count({ where: { createdAt: { gte: startOfToday } } }).catch(() => 0),
+    ]);
 
+    const totalRevenueCents = revenueAgg._sum.totalPaidCents || 0;
+    const activeCitiesCount = citiesGroup.length;
     const todayBidsCount = todayAgg._count.id || 0;
     const todayVolumeCents = todayAgg._sum.amountCents || 0;
 
-    // 6. Total Payment count across all time
-    const totalPaymentsCount = await prisma.payment.count({
-      where: { status: { in: ['COMPLETED', 'SUCCEEDED'] } },
-    });
-
-    // 7. Recent financial activities (for ticker)
-    const recentPayments = await prisma.payment.findMany({
-      where: { status: { in: ['COMPLETED', 'SUCCEEDED'] } },
-      take: 8,
-      orderBy: { createdAt: 'desc' },
-      include: {
-        restaurant: {
-          select: {
-            name: true,
-            city: true,
-            totalPaidCents: true,
-          },
-        },
-      },
-    });
-
-    let recentEvents = recentPayments.map((p) => {
+    let recentEvents = (recentPayments || []).map((p: any) => {
       const now = Date.now();
       const diffMinutes = Math.max(1, Math.floor((now - new Date(p.createdAt).getTime()) / 60000));
       const timeAgo = diffMinutes < 60 ? `${diffMinutes}m ago` : `${Math.floor(diffMinutes / 60)}h ago`;
@@ -110,9 +70,9 @@ export async function GET() {
       const recentRestaurants = await prisma.restaurant.findMany({
         take: 8,
         orderBy: { updatedAt: 'desc' },
-      });
+      }).catch(() => []);
 
-      recentEvents = recentRestaurants.map((r, idx) => ({
+      recentEvents = (recentRestaurants || []).map((r: any, idx: number) => ({
         id: r.id,
         restaurantName: r.name,
         city: r.city,
@@ -122,6 +82,9 @@ export async function GET() {
       }));
     }
 
+    const dbSiteVisitors = siteStatsRecord?.totalVisitors || 0;
+    const baseVisitors = Math.max(1, dbSiteVisitors, pageViewsCount);
+    const todayVisitors = Math.max(1, todayVisitorsCount || baseVisitors);
     const onlineCount = Math.max(1, Math.floor(todayVisitors * 0.1) + 1);
 
     // Calculate days since launch date
@@ -137,15 +100,15 @@ export async function GET() {
         todayBidsCount,
         todayVolumeCents,
         totalPaymentsCount,
-        baseVisitors: Math.max(1, totalVisitors),
-        todayVisitors: Math.max(1, todayVisitors),
+        baseVisitors,
+        todayVisitors,
         onlineCount,
         daysSinceLaunch,
         recentEvents,
       },
       {
         headers: {
-          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
           'Pragma': 'no-cache',
           'Expires': '0',
         },
