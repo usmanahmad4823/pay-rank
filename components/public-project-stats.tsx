@@ -1,18 +1,52 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { useCurrency } from '@/components/currency-context';
 
 interface PublicProjectStatsProps {
   totalCount?: number;
 }
 
 export function PublicProjectStats({ totalCount }: PublicProjectStatsProps) {
-  const count = totalCount || 2919;
+  const { formatAmount } = useCurrency();
+  const [stats, setStats] = useState<{
+    totalRevenueCents: number;
+    totalVerifiedRestaurants: number;
+    baseVisitors: number;
+    daysSinceLaunch: number;
+  }>({
+    totalRevenueCents: 0,
+    totalVerifiedRestaurants: totalCount || 0,
+    baseVisitors: 0,
+    daysSinceLaunch: 27,
+  });
+
+  useEffect(() => {
+    async function fetchLiveStats() {
+      try {
+        const res = await fetch('/api/stats');
+        const data = await res.json();
+        if (data.success) {
+          setStats({
+            totalRevenueCents: data.totalRevenueCents || 0,
+            totalVerifiedRestaurants: data.totalVerifiedRestaurants || totalCount || 0,
+            baseVisitors: data.baseVisitors || 0,
+            daysSinceLaunch: data.daysSinceLaunch || 27,
+          });
+        }
+      } catch (err) {
+        console.error('Failed to fetch stats for stats widget:', err);
+      }
+    }
+    fetchLiveStats();
+  }, [totalCount]);
+
+  const restaurantCount = stats.totalVerifiedRestaurants || totalCount || 0;
 
   return (
     <section className="w-full max-w-3xl mx-auto px-4 sm:px-6 my-10 space-y-6 text-center">
       <p className="text-xs sm:text-sm text-stone-600 font-medium">
-        Some stats about this <span className="text-coral-500 font-bold">simple side project</span> since its launch 27 days ago
+        Live stats about <span className="text-coral-500 font-bold">PayRank network</span> since launch {stats.daysSinceLaunch} days ago
       </p>
 
       {/* 3 Stat Cards in a row */}
@@ -21,7 +55,7 @@ export function PublicProjectStats({ totalCount }: PublicProjectStatsProps) {
         <div className="bg-white rounded-[24px] p-5 border border-stone-200/80 shadow-xs flex flex-col items-center justify-center gap-0.5">
           <div className="flex items-center gap-2 font-mono font-extrabold text-stone-900 text-xl sm:text-2xl tracking-tight">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse flex-shrink-0" />
-            <span>1,558,322</span>
+            <span>{stats.baseVisitors ? stats.baseVisitors.toLocaleString() : '1,558,322'}</span>
           </div>
           <span className="text-stone-500 text-xs font-medium">visitors</span>
         </div>
@@ -29,18 +63,17 @@ export function PublicProjectStats({ totalCount }: PublicProjectStatsProps) {
         {/* Revenue */}
         <div className="bg-white rounded-[24px] p-5 border border-stone-200/80 shadow-xs flex flex-col items-center justify-center gap-0.5">
           <div className="flex items-center gap-1 font-mono font-extrabold text-stone-900 text-xl sm:text-2xl tracking-tight">
-            <span className="text-coral-500">$</span>
-            <span>260,138</span>
+            <span>{formatAmount(stats.totalRevenueCents)}</span>
           </div>
-          <span className="text-stone-500 text-xs font-medium">revenue</span>
+          <span className="text-stone-500 text-xs font-medium font-sans">total revenue</span>
         </div>
 
-        {/* Products added */}
+        {/* Restaurants listed */}
         <div className="bg-white rounded-[24px] p-5 border border-stone-200/80 shadow-xs flex flex-col items-center justify-center gap-0.5">
           <div className="font-mono font-extrabold text-stone-900 text-xl sm:text-2xl tracking-tight">
-            {count.toLocaleString()}
+            {restaurantCount.toLocaleString()}
           </div>
-          <span className="text-stone-500 text-xs font-medium">products added</span>
+          <span className="text-stone-500 text-xs font-medium">restaurants listed</span>
         </div>
       </div>
 

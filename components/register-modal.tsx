@@ -87,7 +87,7 @@ export function RegisterModal({
       }
     } catch (err) {
       console.error('Upload error:', err);
-      setErrorMessage('Image upload failed. Please try again or use a sample.');
+      setErrorMessage('Image upload failed. Please select a valid image file and try again.');
     } finally {
       setIsUploading(false);
     }

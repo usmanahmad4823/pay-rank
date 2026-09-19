@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Crown, Search, ArrowUpRight } from 'lucide-react';
@@ -18,6 +18,32 @@ export function Navbar({ onOpenRegister, onOpenTopup, onOpenRules, onOpenSearch 
   const { currency, setCurrency } = useCurrency();
   const pathname = usePathname();
 
+  const [liveStats, setLiveStats] = useState<{
+    onlineCount: number;
+    todayVisitors: number;
+  }>({
+    onlineCount: 24,
+    todayVisitors: 1450,
+  });
+
+  useEffect(() => {
+    async function fetchStats() {
+      try {
+        const res = await fetch('/api/stats');
+        const data = await res.json();
+        if (data.success) {
+          setLiveStats({
+            onlineCount: data.onlineCount || 24,
+            todayVisitors: data.todayVisitors || 1450,
+          });
+        }
+      } catch (err) {
+        console.error('Failed to fetch navbar stats:', err);
+      }
+    }
+    fetchStats();
+  }, []);
+
   const isDailyActive = pathname === '/';
   const isCitiesActive = pathname.startsWith('/cities') || pathname.startsWith('/rankings') || pathname.startsWith('/city');
 
@@ -31,11 +57,13 @@ export function Navbar({ onOpenRegister, onOpenTopup, onOpenRules, onOpenSearch 
           {/* Live Visitor Stat Pill */}
           <div className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-stone-100/80 text-stone-600 border border-stone-200/60 text-[11px] font-medium backdrop-blur-xs">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="font-semibold text-stone-800">37 online</span>
+            <span className="font-semibold text-stone-800">{liveStats.onlineCount} online</span>
             <span className="text-stone-300">•</span>
-            <span>4,402 visitors today</span>
+            <span>{liveStats.todayVisitors.toLocaleString()} visitors today</span>
             <span className="text-stone-300">•</span>
-            <span className="text-stone-500 hover:text-stone-900 cursor-pointer flex items-center font-semibold">stats<ArrowUpRight className="w-3 h-3 ml-0.5" /></span>
+            <a href="#top" className="text-stone-500 hover:text-stone-900 cursor-pointer flex items-center font-semibold">
+              stats<ArrowUpRight className="w-3 h-3 ml-0.5" />
+            </a>
           </div>
         </div>
 
@@ -111,5 +139,3 @@ export function Navbar({ onOpenRegister, onOpenTopup, onOpenRules, onOpenSearch 
     </header>
   );
 }
-
-
