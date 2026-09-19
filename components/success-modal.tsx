@@ -25,7 +25,7 @@ export function SuccessModal({ isOpen, onClose }: SuccessModalProps) {
 
   const handleShareOnX = () => {
     const text = encodeURIComponent(
-      '🔥 I just locked a top rank spot on OUTBID.LOL! Outbid me if you can:'
+      '🔥 I just locked a top rank spot on PayRank! Outbid me if you can:'
     );
     const url = encodeURIComponent(window.location.origin);
     window.open(`https://x.com/intent/tweet?text=${text}&url=${url}`, '_blank');
