@@ -14,31 +14,56 @@ export function PublicProjectStats({ totalCount }: PublicProjectStatsProps) {
     totalVerifiedRestaurants: number;
     baseVisitors: number;
     daysSinceLaunch: number;
+    isLoading: boolean;
   }>({
     totalRevenueCents: 0,
     totalVerifiedRestaurants: totalCount || 0,
     baseVisitors: 0,
     daysSinceLaunch: 27,
+    isLoading: true,
   });
 
   useEffect(() => {
-    async function fetchLiveStats() {
+    let isMounted = true;
+
+    async function recordAndFetchStats() {
       try {
+        // 1. Record pageview visit in real-time database
+        await fetch('/api/track-visit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: typeof window !== 'undefined' ? window.location.pathname : '/' }),
+        }).catch(() => {});
+
+        // 2. Fetch updated real-time stats from database
         const res = await fetch('/api/stats');
         const data = await res.json();
-        if (data.success) {
+
+        if (data.success && isMounted) {
           setStats({
             totalRevenueCents: data.totalRevenueCents || 0,
             totalVerifiedRestaurants: data.totalVerifiedRestaurants || totalCount || 0,
             baseVisitors: data.baseVisitors || 0,
             daysSinceLaunch: data.daysSinceLaunch || 27,
+            isLoading: false,
           });
         }
       } catch (err) {
-        console.error('Failed to fetch stats for stats widget:', err);
+        console.error('Failed to fetch realtime stats:', err);
+        if (isMounted) {
+          setStats((prev) => ({ ...prev, isLoading: false }));
+        }
       }
     }
-    fetchLiveStats();
+
+    recordAndFetchStats();
+
+    // Poll every 5 seconds for real-time live updates
+    const interval = setInterval(recordAndFetchStats, 5000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
   }, [totalCount]);
 
   const restaurantCount = stats.totalVerifiedRestaurants || totalCount || 0;
@@ -51,16 +76,16 @@ export function PublicProjectStats({ totalCount }: PublicProjectStatsProps) {
 
       {/* 3 Stat Cards in a row */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        {/* Visitors */}
+        {/* Realtime Visitors */}
         <div className="bg-white rounded-[24px] p-5 border border-stone-200/80 shadow-xs flex flex-col items-center justify-center gap-0.5">
           <div className="flex items-center gap-2 font-mono font-extrabold text-stone-900 text-xl sm:text-2xl tracking-tight">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse flex-shrink-0" />
-            <span>{stats.baseVisitors ? stats.baseVisitors.toLocaleString() : '1,558,322'}</span>
+            <span>{stats.isLoading ? '...' : stats.baseVisitors.toLocaleString()}</span>
           </div>
           <span className="text-stone-500 text-xs font-medium">visitors</span>
         </div>
 
-        {/* Revenue */}
+        {/* Total Revenue */}
         <div className="bg-white rounded-[24px] p-5 border border-stone-200/80 shadow-xs flex flex-col items-center justify-center gap-0.5">
           <div className="flex items-center gap-1 font-mono font-extrabold text-stone-900 text-xl sm:text-2xl tracking-tight">
             <span>{formatAmount(stats.totalRevenueCents)}</span>

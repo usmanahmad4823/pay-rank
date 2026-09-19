@@ -9,23 +9,23 @@ datasource db {
 }
 
 model Restaurant {
-  id             String   @id @default(uuid())
-  name           String
-  normalizedName String   @map("normalized_name")
-  city           String
-  normalizedCity     String   @map("normalized_city")
-  province           String?  @map("province")
-  normalizedProvince String?  @map("normalized_province")
+  id                 String    @id @default(uuid())
+  name               String
+  normalizedName     String    @map("normalized_name")
+  city               String
+  normalizedCity     String    @map("normalized_city")
+  province           String?   @map("province")
+  normalizedProvince String?   @map("normalized_province")
   cuisine            String?
   description        String?
-  logoUrl            String   @map("logo_url")
-  totalPaidCents     Int      @default(0) @map("total_paid_cents")
-  ownerEditToken     String   @unique @default(uuid()) @map("owner_edit_token")
-  status             String   @default("PENDING_PAYMENT") // PENDING_PAYMENT | VERIFIED
-  createdAt          DateTime @default(now()) @map("created_at")
-  updatedAt          DateTime @updatedAt @map("updated_at")
+  logoUrl            String    @map("logo_url")
+  totalPaidCents     Int       @default(0) @map("total_paid_cents")
+  ownerEditToken     String    @unique @default(uuid()) @map("owner_edit_token")
+  status             String    @default("PENDING_PAYMENT") // PENDING_PAYMENT | VERIFIED
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
 
-  payments       Payment[]
+  payments           Payment[]
 
   @@index([normalizedCity, totalPaidCents(sort: Desc)])
   @@index([normalizedProvince, totalPaidCents(sort: Desc)])
@@ -51,4 +51,22 @@ model Payment {
   createdAt             DateTime   @default(now()) @map("created_at")
 
   @@map("payments")
+}
+
+model PageView {
+  id        String   @id @default(uuid())
+  ip        String?  @map("ip")
+  path      String?  @map("path")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([createdAt])
+  @@map("page_views")
+}
+
+model SiteStats {
+  id            String   @id @default("global")
+  totalVisitors Int      @default(0) @map("total_visitors")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("site_stats")
 }

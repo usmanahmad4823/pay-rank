@@ -95,10 +95,21 @@ export async function GET() {
       }));
     }
 
-    // 7. Calculate dynamic visitor stats based on real database metrics
-    const baseVisitors = totalVerifiedRestaurants * 1420 + Math.floor(totalRevenueCents / 20);
-    const todayVisitors = Math.max(1240, totalVerifiedRestaurants * 180 + (new Date().getHours() * 85));
-    const onlineCount = Math.max(14, Math.floor(totalVerifiedRestaurants * 2.2) + (new Date().getMinutes() % 12));
+    // 7. Get real visitor count directly from database PageView & SiteStats tables
+    const siteStatsRecord = await prisma.siteStats.findUnique({
+      where: { id: 'global' },
+    });
+
+    const pageViewsCount = await prisma.pageView.count();
+    const baseVisitors = (siteStatsRecord?.totalVisitors || 0) + pageViewsCount;
+
+    const todayVisitors = await prisma.pageView.count({
+      where: {
+        createdAt: { gte: startOfToday },
+      },
+    });
+
+    const onlineCount = Math.max(1, Math.floor(todayVisitors * 0.1) + 1);
 
     // Calculate days since launch date
     const launchDate = new Date('2026-08-23T00:00:00Z');

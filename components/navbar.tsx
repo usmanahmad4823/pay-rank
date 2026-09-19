@@ -33,8 +33,8 @@ export function Navbar({ onOpenRegister, onOpenTopup, onOpenRules, onOpenSearch 
         const data = await res.json();
         if (data.success) {
           setLiveStats({
-            onlineCount: data.onlineCount || 24,
-            todayVisitors: data.todayVisitors || 1450,
+            onlineCount: data.onlineCount || 1,
+            todayVisitors: data.todayVisitors || 1,
           });
         }
       } catch (err) {
@@ -42,6 +42,8 @@ export function Navbar({ onOpenRegister, onOpenTopup, onOpenRules, onOpenSearch 
       }
     }
     fetchStats();
+    const interval = setInterval(fetchStats, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   const isDailyActive = pathname === '/';
