@@ -6,26 +6,25 @@ export const revalidate = 0;
 
 export async function GET() {
   try {
-    // 1. Automatically increment SiteStats totalVisitors counter on stats request
+    // 1. Record page visit and count total visits directly in database
     let totalVisitors = 1;
     let todayVisitors = 1;
 
     try {
-      const statsRecord = await prisma.siteStats.upsert({
-        where: { id: 'global' },
-        update: {
-          totalVisitors: { increment: 1 },
-        },
-        create: {
-          id: 'global',
-          totalVisitors: 1,
-        },
-      });
-      totalVisitors = statsRecord.totalVisitors;
-
-      // Async record PageView entry
-      prisma.pageView.create({
+      // Record new pageview
+      await prisma.pageView.create({
         data: { path: '/' },
+      });
+
+      // Count all pageviews in database
+      const totalPv = await prisma.pageView.count();
+      totalVisitors = Math.max(1, totalPv);
+
+      // Also sync SiteStats table in background
+      prisma.siteStats.upsert({
+        where: { id: 'global' },
+        update: { totalVisitors: { increment: 1 } },
+        create: { id: 'global', totalVisitors: totalVisitors },
       }).catch(() => {});
 
       const startOfToday = new Date();

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useCurrency } from '@/components/currency-context';
 
 interface PublicProjectStatsProps {
@@ -9,25 +9,14 @@ interface PublicProjectStatsProps {
 
 export function PublicProjectStats({ totalCount }: PublicProjectStatsProps) {
   const { formatAmount } = useCurrency();
-
-  const getLocalVisitorCount = useCallback(() => {
-    try {
-      if (typeof window === 'undefined') return 1;
-      const stored = parseInt(localStorage.getItem('payrank_local_visitors') || '1', 10);
-      return Math.max(1, isNaN(stored) ? 1 : stored);
-    } catch {
-      return 1;
-    }
-  }, []);
-
   const [stats, setStats] = useState<{
     totalRevenueCents: number;
     totalVerifiedRestaurants: number;
     baseVisitors: number;
     daysSinceLaunch: number;
   }>({
-    totalRevenueCents: 1241000, // Default seed $12,410 / Rs 3,450,000
-    totalVerifiedRestaurants: totalCount || 16,
+    totalRevenueCents: 0,
+    totalVerifiedRestaurants: totalCount || 0,
     baseVisitors: 1,
     daysSinceLaunch: 27,
   });
@@ -35,22 +24,25 @@ export function PublicProjectStats({ totalCount }: PublicProjectStatsProps) {
   useEffect(() => {
     let isMounted = true;
 
-    async function fetchStats() {
+    async function recordAndFetchStats() {
       try {
+        // 1. Record pageview visit in real-time database (non-blocking)
+        fetch(`/api/track-visit?t=${Date.now()}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          cache: 'no-store',
+          body: JSON.stringify({ path: typeof window !== 'undefined' ? window.location.pathname : '/' }),
+        }).catch(() => {});
+
+        // 2. Fetch updated real-time stats from database
         const res = await fetch(`/api/stats?t=${Date.now()}`, { cache: 'no-store' });
         const data = await res.json();
 
         if (data && data.success && isMounted) {
-          const serverVisitors = data.baseVisitors || 1;
-          const localVisitors = getLocalVisitorCount();
-          const combinedVisitors = Math.max(serverVisitors, localVisitors);
-
           setStats({
-            totalRevenueCents: data.totalRevenueCents > 0 ? data.totalRevenueCents : 1241000,
-            totalVerifiedRestaurants: (data.totalVerifiedRestaurants && data.totalVerifiedRestaurants > 0)
-              ? data.totalVerifiedRestaurants
-              : (totalCount || 16),
-            baseVisitors: Math.max(1, combinedVisitors),
+            totalRevenueCents: data.totalRevenueCents || 0,
+            totalVerifiedRestaurants: data.totalVerifiedRestaurants || totalCount || 0,
+            baseVisitors: Math.max(1, data.baseVisitors || 1),
             daysSinceLaunch: data.daysSinceLaunch || 27,
           });
         }
@@ -59,34 +51,18 @@ export function PublicProjectStats({ totalCount }: PublicProjectStatsProps) {
       }
     }
 
-    fetchStats();
+    recordAndFetchStats();
 
-    const handleLocalIncrement = () => {
-      const localVisitors = getLocalVisitorCount();
-      setStats((prev) => ({
-        ...prev,
-        baseVisitors: Math.max(prev.baseVisitors + 1, localVisitors),
-      }));
-    };
-
-    if (typeof window !== 'undefined') {
-      window.addEventListener('payrank_visitor_increment', handleLocalIncrement);
-    }
-
-    // Poll every 3 seconds for real-time live updates
-    const interval = setInterval(fetchStats, 3000);
+    // Poll every 4 seconds for real-time live updates
+    const interval = setInterval(recordAndFetchStats, 4000);
     return () => {
       isMounted = false;
       clearInterval(interval);
-      if (typeof window !== 'undefined') {
-        window.removeEventListener('payrank_visitor_increment', handleLocalIncrement);
-      }
     };
-  }, [totalCount, getLocalVisitorCount]);
+  }, [totalCount]);
 
-  const restaurantCount = stats.totalVerifiedRestaurants || totalCount || 16;
-  const visitorCount = Math.max(1, stats.baseVisitors || getLocalVisitorCount() || 1);
-  const revenueCents = stats.totalRevenueCents > 0 ? stats.totalRevenueCents : 1241000;
+  const restaurantCount = stats.totalVerifiedRestaurants || totalCount || 0;
+  const visitorCount = Math.max(1, stats.baseVisitors || 1);
 
   return (
     <section className="w-full max-w-3xl mx-auto px-4 sm:px-6 my-10 space-y-6 text-center">
@@ -108,7 +84,7 @@ export function PublicProjectStats({ totalCount }: PublicProjectStatsProps) {
         {/* Total Revenue */}
         <div className="bg-white rounded-[24px] p-5 border border-stone-200/80 shadow-xs flex flex-col items-center justify-center gap-0.5">
           <div className="flex items-center gap-1 font-mono font-extrabold text-stone-900 text-xl sm:text-2xl tracking-tight">
-            <span>{formatAmount(revenueCents)}</span>
+            <span>{formatAmount(stats.totalRevenueCents)}</span>
           </div>
           <span className="text-stone-500 text-xs font-medium font-sans">total revenue</span>
         </div>
