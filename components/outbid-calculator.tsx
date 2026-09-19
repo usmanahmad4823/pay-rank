@@ -16,7 +16,7 @@ export function OutbidCalculator({ currentTopBidCents, onClaimRank }: OutbidCalc
 
   // Default bid: outbid rank #1 by 10 PKR (4 cents)
   const defaultInitialBidInput = React.useMemo(() => {
-    const requiredCents = currentTopBidCents > 0 ? currentTopBidCents + 4 : 2000;
+    const requiredCents = currentTopBidCents > 0 ? currentTopBidCents + 4 : 4;
     if (currency === 'PKR') {
       const pkrVal = Math.round((requiredCents / 100) * exchangeRate);
       return pkrVal.toString();
@@ -41,10 +41,10 @@ export function OutbidCalculator({ currentTopBidCents, onClaimRank }: OutbidCalc
 
   const handleApplyRankPreset = (rank: 1 | 2 | 3) => {
     setTargetRank(rank);
-    let target = currentTopBidCents > 0 ? currentTopBidCents : 2000;
+    let target = currentTopBidCents > 0 ? currentTopBidCents : 4;
     if (rank === 2) target = Math.round(target * 0.7);
     if (rank === 3) target = Math.round(target * 0.5);
-    const requiredCents = target + 4; // + 10 PKR / 4 cents
+    const requiredCents = Math.max(4, target); // minimum 10 PKR / 4 cents
 
     if (currency === 'PKR') {
       const pkrVal = Math.round((requiredCents / 100) * exchangeRate);
