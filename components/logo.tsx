@@ -30,9 +30,7 @@ export function Logo({ className = '', iconOnly = false, size = 'md', theme = 'g
     lg: 'text-2xl sm:text-3xl',
   }[size];
 
-  const bgClass = theme === 'green'
-    ? 'bg-[#22A57E] shadow-emerald-500/20'
-    : 'bg-[#F97316] shadow-coral-500/20';
+  const bgClass = 'bg-[#E06D53] shadow-[#E06D53]/25';
 
   return (
     <Link
@@ -40,7 +38,7 @@ export function Logo({ className = '', iconOnly = false, size = 'md', theme = 'g
       className={`inline-flex items-center gap-2.5 group select-none ${className}`}
       title="PayRank — #1 Pay-to-Rank Leaderboard"
     >
-      {/* 100% Accurate Fully Circular Badge from Reference Image */}
+      {/* 100% Accurate Fully Circular Badge with #E06D53 Color */}
       <div
         className={`relative ${iconSizeClasses} rounded-full ${bgClass} text-white flex items-center justify-center font-bold shadow-md group-hover:scale-105 group-hover:shadow-lg transition-all duration-300 shrink-0 overflow-hidden`}
       >
@@ -60,15 +58,12 @@ export function Logo({ className = '', iconOnly = false, size = 'md', theme = 'g
         </svg>
       </div>
 
-      {/* Brand Wordmark (Shows next to logo) */}
+      {/* Brand Wordmark - Fully Solid Black PayRank Text */}
       {!iconOnly && (
         <span
-          className={`font-heading font-black ${textSizeClasses} tracking-tight text-stone-900 leading-none whitespace-nowrap flex items-center`}
+          className={`font-heading font-black ${textSizeClasses} tracking-tight text-black leading-none whitespace-nowrap`}
         >
-          <span>Pay</span>
-          <span className="text-coral-500 font-black ml-0.5">
-            Rank
-          </span>
+          PayRank
         </span>
       )}
     </Link>
