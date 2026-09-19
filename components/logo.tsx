@@ -7,19 +7,20 @@ interface LogoProps {
   className?: string;
   iconOnly?: boolean;
   size?: 'sm' | 'md' | 'lg';
+  theme?: 'coral' | 'emerald';
 }
 
-export function Logo({ className = '', iconOnly = false, size = 'md' }: LogoProps) {
+export function Logo({ className = '', iconOnly = false, size = 'md', theme = 'coral' }: LogoProps) {
   const iconSizeClasses = {
-    sm: 'w-7 h-7 rounded-lg text-xs',
-    md: 'w-8.5 h-8.5 sm:w-9 sm:h-9 rounded-xl text-sm',
-    lg: 'w-11 h-11 rounded-2xl text-base',
+    sm: 'w-7.5 h-7.5 text-xs',
+    md: 'w-9 h-9 sm:w-10 sm:h-10 text-sm',
+    lg: 'w-12 h-12 text-base',
   }[size];
 
-  const crownSvgSize = {
-    sm: 'w-3.5 h-3.5',
-    md: 'w-4 sm:w-4.5 h-4 sm:h-4.5',
-    lg: 'w-6 h-6',
+  const pSvgSize = {
+    sm: 'w-4.5 h-4.5',
+    md: 'w-5.5 sm:w-6 h-5.5 sm:h-6',
+    lg: 'w-7.5 h-7.5',
   }[size];
 
   const textSizeClasses = {
@@ -28,49 +29,36 @@ export function Logo({ className = '', iconOnly = false, size = 'md' }: LogoProp
     lg: 'text-xl sm:text-2xl',
   }[size];
 
+  const bgGradientClass = theme === 'emerald'
+    ? 'bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-600 shadow-emerald-500/25'
+    : 'bg-gradient-to-br from-coral-500 via-coral-600 to-amber-500 shadow-coral-500/25';
+
   return (
     <Link
       href="/"
-      className={`inline-flex items-center gap-2 group select-none ${className}`}
+      className={`inline-flex items-center gap-2.5 group select-none ${className}`}
       title="PayRank — #1 Pay-to-Rank Leaderboard"
     >
-      {/* Premium Geometric Crown Badge */}
+      {/* Fully Circular Badge with White Stylized 'P' Emblem */}
       <div
-        className={`relative ${iconSizeClasses} bg-gradient-to-br from-stone-950 via-stone-900 to-stone-850 text-white flex items-center justify-center font-bold border border-white/10 shadow-lg shadow-stone-950/20 group-hover:scale-105 group-hover:shadow-coral-500/25 group-hover:border-coral-500/40 transition-all duration-300 shrink-0 overflow-hidden`}
+        className={`relative ${iconSizeClasses} rounded-full ${bgGradientClass} text-white flex items-center justify-center font-bold border border-white/30 shadow-lg group-hover:scale-105 group-hover:shadow-xl transition-all duration-300 shrink-0 overflow-hidden`}
       >
-        {/* Subtle Ambient Backlight Glow */}
-        <div className="absolute -inset-1 bg-gradient-to-r from-coral-500/20 to-amber-500/20 blur-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-        
-        {/* Custom Luxury Crown SVG Icon */}
+        {/* Subtle Outer Glow & Inner Ring */}
+        <div className="absolute inset-0 rounded-full border border-white/20 opacity-80 pointer-events-none" />
+
+        {/* Custom Bold Stylized 'P' SVG */}
         <svg
-          className={`${crownSvgSize} relative z-10 text-coral-500 drop-shadow-[0_2px_4px_rgba(249,115,22,0.4)] transition-transform duration-300 group-hover:rotate-[-6deg]`}
-          viewBox="0 0 24 24"
+          className={`${pSvgSize} relative z-10 text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.2)] transition-transform duration-300 group-hover:scale-110`}
+          viewBox="0 0 32 32"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
         >
           <path
-            d="M3 18H21V19.5C21 20.3284 20.3284 21 19.5 21H4.5C3.67157 21 3 20.3284 3 19.5V18Z"
-            fill="url(#logo_crown_base)"
+            fillRule="evenodd"
+            clipRule="evenodd"
+            d="M 10 6 C 8.343 6 7 7.343 7 9 V 23 C 7 24.657 8.343 26 10 26 C 11.657 26 13 24.657 13 23 V 19 H 17.5 C 21.642 19 25 15.642 25 11.5 C 25 7.358 21.642 6 17.5 6 H 10 Z M 13 10.5 H 17.5 C 18.052 10.5 19.5 10.948 19.5 12.5 C 19.5 14.052 18.052 14.5 17.5 14.5 H 13 V 10.5 Z"
+            fill="white"
           />
-          <path
-            d="M4.5 16.5L3 8L8.5 12L12 4.5L15.5 12L21 8L19.5 16.5H4.5Z"
-            fill="url(#logo_crown_body)"
-          />
-          <circle cx="3" cy="7" r="1.25" fill="#F97316" />
-          <circle cx="12" cy="3.5" r="1.5" fill="#FBBF24" />
-          <circle cx="21" cy="7" r="1.25" fill="#F97316" />
-
-          <defs>
-            <linearGradient id="logo_crown_base" x1="3" y1="18" x2="21" y2="21" gradientUnits="userSpaceOnUse">
-              <stop stopColor="#F97316" />
-              <stop offset="1" stopColor="#EF4444" />
-            </linearGradient>
-            <linearGradient id="logo_crown_body" x1="3" y1="4.5" x2="21" y2="16.5" gradientUnits="userSpaceOnUse">
-              <stop stopColor="#FBBF24" />
-              <stop offset="0.5" stopColor="#F97316" />
-              <stop offset="1" stopColor="#EC4899" />
-            </linearGradient>
-          </defs>
         </svg>
       </div>
 
