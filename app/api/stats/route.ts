@@ -101,7 +101,8 @@ export async function GET() {
     });
 
     const pageViewsCount = await prisma.pageView.count();
-    const baseVisitors = (siteStatsRecord?.totalVisitors || 0) + pageViewsCount;
+    const dbSiteVisitors = siteStatsRecord?.totalVisitors || 0;
+    const baseVisitors = Math.max(1, dbSiteVisitors > 0 ? dbSiteVisitors : pageViewsCount);
 
     const todayVisitors = await prisma.pageView.count({
       where: {
