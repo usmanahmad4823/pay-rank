@@ -87,7 +87,7 @@ export async function GET(request: NextRequest) {
               fontWeight: 600,
             }}
           >
-            Claim your rank on outbid.lol
+            Claim your rank on PayRank
           </div>
         </div>
       ),

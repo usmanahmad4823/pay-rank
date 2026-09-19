@@ -30,7 +30,7 @@ export function Navbar({ onOpenRegister, onOpenTopup, onOpenRules, onOpenSearch 
               <Crown className="w-3.5 h-3.5 text-coral-500 fill-coral-500" />
             </div>
             <span className="font-heading font-extrabold text-sm sm:text-base text-stone-900 tracking-tight whitespace-nowrap">
-              payrank<span className="text-coral-500 font-black">.lol</span>
+              pay<span className="text-coral-500 font-black">rank</span>
             </span>
           </Link>
 

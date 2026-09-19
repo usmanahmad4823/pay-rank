@@ -46,25 +46,8 @@ export function PublicProjectStats({ totalCount }: PublicProjectStatsProps) {
 
       {/* Footer Attribution Line */}
       <div className="space-y-2 pt-2 text-center text-xs text-stone-500">
-        <p>
-          Built by{' '}
-          <a
-            href="https://x.com/jonathan_wilke"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-coral-500 font-medium hover:text-coral-600 transition-colors cursor-pointer"
-          >
-            @jonathan_wilke
-          </a>{' '}
-          · Brought to you by{' '}
-          <a
-            href="https://supastarter.dev"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-coral-500 font-medium hover:text-coral-600 transition-colors cursor-pointer"
-          >
-            supastarter.dev
-          </a>
+        <p className="font-semibold text-stone-600">
+          <span className="text-coral-500 font-extrabold">PayRank</span> — #1 Pay-to-Rank Restaurant Directory in Pakistan
         </p>
 
         <div className="flex items-center justify-center gap-2 text-coral-500 font-semibold text-[11px] flex-wrap">

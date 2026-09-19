@@ -18,9 +18,9 @@ import { ToastProvider } from '@/components/toast-notification';
 import { CurrencyProvider } from '@/components/currency-context';
 
 export const metadata: Metadata = {
-  title: 'outbid.lol — Claim a rank on the public leaderboard',
-  description: 'The world premier monetary public leaderboard directory. No reviews, no algorithms. Claim a rank by total verified bid amount.',
-  keywords: ['outbid', 'pay to rank', 'leaderboard', 'public directory'],
+  title: 'PayRank — Claim #1 Restaurant Rank in Pakistan',
+  description: 'The premier pay-to-rank restaurant directory in Pakistan. No fake reviews, no biased algorithms. Claim rank #1 by total verified payment.',
+  keywords: ['payrank', 'restaurant ranking', 'pakistan restaurants', 'leaderboard', 'pay to rank'],
 };
 
 export default function RootLayout({
@@ -31,12 +31,12 @@ export default function RootLayout({
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
-    name: 'outbid.lol',
-    url: 'https://outbid.lol',
-    description: 'The world premier monetary public leaderboard directory. Claim a rank by total verified bid amount.',
+    name: 'PayRank',
+    url: 'https://pay-rank.vercel.app',
+    description: 'The premier pay-to-rank restaurant directory in Pakistan. Claim rank #1 by total verified payment.',
     potentialAction: {
       '@type': 'SearchAction',
-      target: 'https://outbid.lol/search?q={search_term_string}',
+      target: 'https://pay-rank.vercel.app/search?q={search_term_string}',
       'query-input': 'required name=search_term_string',
     },
   };
