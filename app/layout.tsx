@@ -16,6 +16,7 @@ const inter = Inter({
 
 import { ToastProvider } from '@/components/toast-notification';
 import { CurrencyProvider } from '@/components/currency-context';
+import { VisitorTracker } from '@/components/visitor-tracker';
 
 export const metadata: Metadata = {
   title: 'PayRank — Claim #1 Restaurant Rank in Pakistan',
@@ -52,6 +53,7 @@ export default function RootLayout({
       <body className="font-sans bg-[#FAF9F6] text-stone-900 min-h-screen flex flex-col antialiased selection:bg-coral-100 selection:text-coral-900">
         <CurrencyProvider>
           <ToastProvider>
+            <VisitorTracker />
             {children}
           </ToastProvider>
         </CurrencyProvider>
