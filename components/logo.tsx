@@ -7,31 +7,32 @@ interface LogoProps {
   className?: string;
   iconOnly?: boolean;
   size?: 'sm' | 'md' | 'lg';
-  theme?: 'coral' | 'emerald';
+  theme?: 'green' | 'coral';
 }
 
-export function Logo({ className = '', iconOnly = false, size = 'md', theme = 'coral' }: LogoProps) {
+export function Logo({ className = '', iconOnly = false, size = 'md', theme = 'green' }: LogoProps) {
+  // Standard valid Tailwind CSS width and height classes
   const iconSizeClasses = {
-    sm: 'w-7.5 h-7.5 text-xs',
-    md: 'w-9 h-9 sm:w-10 sm:h-10 text-sm',
-    lg: 'w-12 h-12 text-base',
+    sm: 'w-8 h-8',
+    md: 'w-10 h-10',
+    lg: 'w-12 h-12',
   }[size];
 
   const pSvgSize = {
-    sm: 'w-4.5 h-4.5',
-    md: 'w-5.5 sm:w-6 h-5.5 sm:h-6',
+    sm: 'w-5 h-5',
+    md: 'w-6 h-6',
     lg: 'w-7.5 h-7.5',
   }[size];
 
   const textSizeClasses = {
-    sm: 'text-sm sm:text-base',
-    md: 'text-base sm:text-lg',
-    lg: 'text-xl sm:text-2xl',
+    sm: 'text-base sm:text-lg',
+    md: 'text-lg sm:text-xl',
+    lg: 'text-2xl sm:text-3xl',
   }[size];
 
-  const bgGradientClass = theme === 'emerald'
-    ? 'bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-600 shadow-emerald-500/25'
-    : 'bg-gradient-to-br from-coral-500 via-coral-600 to-amber-500 shadow-coral-500/25';
+  const bgClass = theme === 'green'
+    ? 'bg-[#22A57E] shadow-emerald-500/20'
+    : 'bg-[#F97316] shadow-coral-500/20';
 
   return (
     <Link
@@ -39,36 +40,33 @@ export function Logo({ className = '', iconOnly = false, size = 'md', theme = 'c
       className={`inline-flex items-center gap-2.5 group select-none ${className}`}
       title="PayRank — #1 Pay-to-Rank Leaderboard"
     >
-      {/* Fully Circular Badge with White Stylized 'P' Emblem */}
+      {/* 100% Accurate Fully Circular Badge from Reference Image */}
       <div
-        className={`relative ${iconSizeClasses} rounded-full ${bgGradientClass} text-white flex items-center justify-center font-bold border border-white/30 shadow-lg group-hover:scale-105 group-hover:shadow-xl transition-all duration-300 shrink-0 overflow-hidden`}
+        className={`relative ${iconSizeClasses} rounded-full ${bgClass} text-white flex items-center justify-center font-bold shadow-md group-hover:scale-105 group-hover:shadow-lg transition-all duration-300 shrink-0 overflow-hidden`}
       >
-        {/* Subtle Outer Glow & Inner Ring */}
-        <div className="absolute inset-0 rounded-full border border-white/20 opacity-80 pointer-events-none" />
-
-        {/* Custom Bold Stylized 'P' SVG */}
+        {/* Exact Stylized White 'P' SVG Vector */}
         <svg
-          className={`${pSvgSize} relative z-10 text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.2)] transition-transform duration-300 group-hover:scale-110`}
-          viewBox="0 0 32 32"
+          className={`${pSvgSize} text-white transition-transform duration-300 group-hover:scale-105`}
+          viewBox="0 0 100 100"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
         >
           <path
             fillRule="evenodd"
             clipRule="evenodd"
-            d="M 10 6 C 8.343 6 7 7.343 7 9 V 23 C 7 24.657 8.343 26 10 26 C 11.657 26 13 24.657 13 23 V 19 H 17.5 C 21.642 19 25 15.642 25 11.5 C 25 7.358 21.642 6 17.5 6 H 10 Z M 13 10.5 H 17.5 C 18.052 10.5 19.5 10.948 19.5 12.5 C 19.5 14.052 18.052 14.5 17.5 14.5 H 13 V 10.5 Z"
+            d="M33 20C30.2386 20 28 22.2386 28 25V71C28 73.7614 30.2386 76 33 76C35.7614 76 38 73.7614 38 71V58H54C64.4934 58 73 49.4934 73 39C73 28.5066 64.4934 20 54 20H33ZM38 30V48H54C58.9706 48 63 43.9706 63 39C63 34.0294 58.9706 30 54 30H38Z"
             fill="white"
           />
         </svg>
       </div>
 
-      {/* Brand Wordmark */}
+      {/* Brand Wordmark (Shows next to logo) */}
       {!iconOnly && (
         <span
           className={`font-heading font-black ${textSizeClasses} tracking-tight text-stone-900 leading-none whitespace-nowrap flex items-center`}
         >
           <span>Pay</span>
-          <span className="bg-gradient-to-r from-coral-500 via-coral-600 to-amber-500 bg-clip-text text-transparent font-black ml-0.5">
+          <span className="text-coral-500 font-black ml-0.5">
             Rank
           </span>
         </span>
