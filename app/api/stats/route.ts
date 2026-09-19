@@ -6,26 +6,55 @@ export const revalidate = 0;
 
 export async function GET() {
   try {
-    // 1. Total revenue cents from verified restaurants
+    // 1. Automatically increment SiteStats totalVisitors counter on stats request
+    let totalVisitors = 1;
+    let todayVisitors = 1;
+
+    try {
+      const statsRecord = await prisma.siteStats.upsert({
+        where: { id: 'global' },
+        update: {
+          totalVisitors: { increment: 1 },
+        },
+        create: {
+          id: 'global',
+          totalVisitors: 1,
+        },
+      });
+      totalVisitors = statsRecord.totalVisitors;
+
+      // Async record PageView entry
+      prisma.pageView.create({
+        data: { path: '/' },
+      }).catch(() => {});
+
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+
+      todayVisitors = await prisma.pageView.count({
+        where: { createdAt: { gte: startOfToday } },
+      });
+      if (todayVisitors === 0) todayVisitors = totalVisitors;
+    } catch (err) {
+      console.error('Visitor increment error:', err);
+    }
+
+    // 2. Total revenue cents from database
     const revenueAgg = await prisma.restaurant.aggregate({
-      where: { status: 'VERIFIED' },
       _sum: { totalPaidCents: true },
     });
     const totalRevenueCents = revenueAgg._sum.totalPaidCents || 0;
 
-    // 2. Total verified restaurants / listings added
-    const totalVerifiedRestaurants = await prisma.restaurant.count({
-      where: { status: 'VERIFIED' },
-    });
+    // 3. Total restaurants / listings count from database
+    const totalVerifiedRestaurants = await prisma.restaurant.count();
 
-    // 3. Active cities count
+    // 4. Active cities count
     const citiesGroup = await prisma.restaurant.groupBy({
       by: ['normalizedCity'],
-      where: { status: 'VERIFIED' },
     });
     const activeCitiesCount = citiesGroup.length;
 
-    // 4. Today's bids / volume
+    // 5. Today's bids / volume
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
 
@@ -41,12 +70,12 @@ export async function GET() {
     const todayBidsCount = todayAgg._count.id || 0;
     const todayVolumeCents = todayAgg._sum.amountCents || 0;
 
-    // 5. Total Payment count across all time
+    // 6. Total Payment count across all time
     const totalPaymentsCount = await prisma.payment.count({
       where: { status: { in: ['COMPLETED', 'SUCCEEDED'] } },
     });
 
-    // 6. Recent financial activities (for ticker)
+    // 7. Recent financial activities (for ticker)
     const recentPayments = await prisma.payment.findMany({
       where: { status: { in: ['COMPLETED', 'SUCCEEDED'] } },
       take: 8,
@@ -78,10 +107,8 @@ export async function GET() {
       };
     });
 
-    // Fallback if no payment records yet (e.g. initial seed before payment table)
     if (recentEvents.length === 0) {
       const recentRestaurants = await prisma.restaurant.findMany({
-        where: { status: 'VERIFIED' },
         take: 8,
         orderBy: { updatedAt: 'desc' },
       });
@@ -95,21 +122,6 @@ export async function GET() {
         timeAgo: `${(idx + 1) * 12}m ago`,
       }));
     }
-
-    // 7. Get real visitor count directly from database PageView & SiteStats tables
-    const siteStatsRecord = await prisma.siteStats.findUnique({
-      where: { id: 'global' },
-    });
-
-    const pageViewsCount = await prisma.pageView.count();
-    const dbSiteVisitors = siteStatsRecord?.totalVisitors || 0;
-    const baseVisitors = Math.max(1, dbSiteVisitors, pageViewsCount);
-
-    const todayVisitors = await prisma.pageView.count({
-      where: {
-        createdAt: { gte: startOfToday },
-      },
-    });
 
     const onlineCount = Math.max(1, Math.floor(todayVisitors * 0.1) + 1);
 
@@ -126,8 +138,8 @@ export async function GET() {
         todayBidsCount,
         todayVolumeCents,
         totalPaymentsCount,
-        baseVisitors,
-        todayVisitors,
+        baseVisitors: Math.max(1, totalVisitors),
+        todayVisitors: Math.max(1, todayVisitors),
         onlineCount,
         daysSinceLaunch,
         recentEvents,
