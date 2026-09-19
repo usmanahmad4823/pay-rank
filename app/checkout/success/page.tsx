@@ -6,6 +6,7 @@ import Link from 'next/link';
 import confetti from 'canvas-confetti';
 import { Crown, CheckCircle2, Copy, Check, MapPin, Globe, Sparkles, TrendingUp, Key, ArrowRight } from 'lucide-react';
 import { formatCurrency } from '@/lib/city-utils';
+import { Logo } from '@/components/logo';
 
 function CheckoutSuccessContent() {
   const searchParams = useSearchParams();
@@ -76,8 +77,8 @@ function CheckoutSuccessContent() {
     <div className="min-h-screen bg-[#FAF9F6] flex items-center justify-center p-4 text-stone-900 font-sans">
       <div className="relative w-full max-w-lg bg-white border border-stone-200 rounded-3xl p-6 sm:p-8 shadow-outbid-card space-y-5 text-center animate-in fade-in zoom-in-95 duration-300 my-6">
         {/* Confetti Header Icon */}
-        <div className="w-16 h-16 rounded-2xl bg-coral-500 text-white flex items-center justify-center mx-auto shadow-coral-pill">
-          <Crown className="w-8 h-8 fill-white" />
+        <div className="flex items-center justify-center mx-auto mb-2">
+          <Logo iconOnly size="lg" />
         </div>
 
         <div>

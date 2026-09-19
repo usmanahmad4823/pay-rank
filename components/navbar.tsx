@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Crown, Search, ArrowUpRight } from 'lucide-react';
 import { useCurrency } from '@/components/currency-context';
+import { Logo } from '@/components/logo';
 
 interface NavbarProps {
   onOpenRegister: () => void;
@@ -25,14 +26,7 @@ export function Navbar({ onOpenRegister, onOpenTopup, onOpenRules, onOpenSearch 
       <div className="max-w-6xl mx-auto px-3 sm:px-6 h-14 sm:h-16 flex items-center justify-between gap-2 sm:gap-3 text-xs">
         {/* Logo & Online Status Pill */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-          <Link href="/" className="flex items-center gap-1.5 sm:gap-2 group">
-            <div className="w-7 h-7 rounded-xl bg-stone-900 text-white flex items-center justify-center font-bold shadow-xs group-hover:scale-105 transition-transform shrink-0">
-              <Crown className="w-3.5 h-3.5 text-coral-500 fill-coral-500" />
-            </div>
-            <span className="font-heading font-extrabold text-sm sm:text-base text-stone-900 tracking-tight whitespace-nowrap">
-              pay<span className="text-coral-500 font-black">rank</span>
-            </span>
-          </Link>
+          <Logo size="sm" />
 
           {/* Live Visitor Stat Pill */}
           <div className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-stone-100/80 text-stone-600 border border-stone-200/60 text-[11px] font-medium backdrop-blur-xs">
