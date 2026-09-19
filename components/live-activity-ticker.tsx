@@ -23,20 +23,23 @@ export function LiveActivityTicker() {
   useEffect(() => {
     async function fetchStatsTicker() {
       try {
-        const res = await fetch('/api/stats');
+        const res = await fetch(`/api/stats?t=${Date.now()}`, { cache: 'no-store' });
         const data = await res.json();
-        if (data.success) {
-          if (Array.isArray(data.recentEvents) && data.recentEvents.length > 0) {
+        if (data && data.success) {
+          if (Array.isArray(data.recentEvents)) {
             setEvents(data.recentEvents);
           }
           setTodayVolumeCents(data.todayVolumeCents || data.totalRevenueCents || 0);
-          setActiveCitiesCount(data.activeCitiesCount || 1);
+          setActiveCitiesCount(data.activeCitiesCount ?? 0);
         }
       } catch (err) {
         console.error('Failed to fetch stats ticker:', err);
       }
     }
+
     fetchStatsTicker();
+    const interval = setInterval(fetchStatsTicker, 4000);
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
@@ -78,7 +81,9 @@ export function LiveActivityTicker() {
               <span className="text-stone-500 text-[10px]">({current.timeAgo})</span>
             </div>
           ) : (
-            <span className="text-stone-400 animate-pulse">Loading live activity feed...</span>
+            <span className="text-stone-400 font-medium flex items-center gap-1 justify-center sm:justify-start">
+              ⚡ Be the first restaurant owner to claim rank #1 in your city!
+            </span>
           )}
         </div>
 
